@@ -17,6 +17,8 @@ COPY src ./src
 
 FROM base AS production
 COPY --from=builder /app /app
+COPY --from=builder /usr/local/lib /usr/local/lib
+COPY --from=builder /usr/local/bin /usr/local/bin
 RUN addgroup --system app && adduser --system --group app
 USER app
 EXPOSE 8000
