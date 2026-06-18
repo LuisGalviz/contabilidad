@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { reportApi } from '@/lib/api'
+import { reportApi, downloadFile } from '@/lib/api'
 import { ArrowLeft, Download, FileSpreadsheet, FileText, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -100,18 +100,28 @@ function TabBar({ tabs, active, onChange }: {
 }
 
 function DownloadBtn({ reportId, file }: { reportId: string; file: { id: string; file_type: string; original_name: string } }) {
+  const [loading, setLoading] = useState(false)
   const Icon = file.file_type.includes('pdf') ? FileText : FileSpreadsheet
+
+  const handleDownload = async () => {
+    setLoading(true)
+    try {
+      await downloadFile(reportId, file.id, file.original_name)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <a
-      href={reportApi.downloadUrl(reportId, file.id)}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+    <button
+      onClick={handleDownload}
+      disabled={loading}
+      className="inline-flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
     >
       <Icon size={16} />
       {file.original_name}
-      <Download size={14} />
-    </a>
+      {loading ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download size={14} />}
+    </button>
   )
 }
 

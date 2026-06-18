@@ -9,17 +9,16 @@ import type { Report, ReportType } from '@/types'
 import { Upload, FileText, Download, Eye } from 'lucide-react'
 import Link from 'next/link'
 
-function DownloadButtons({ report, tFn }: { report: Report; tFn: (k: string) => string }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+function DownloadButtons({ report }: { report: Report }) {
+  const [loading, setLoading] = useState<string | null>(null)
 
-  const download = (fileId: string, fileName: string) => {
-    const url = reportApi.downloadUrl(report.id, fileId)
-    const a = document.createElement('a')
-    a.href = url
-    a.setAttribute('download', fileName)
-    fetch(url, { headers: { Authorization: `Bearer ${token}` }, redirect: 'follow' })
-      .then((r) => r.url)
-      .then((redirectUrl) => { a.href = redirectUrl; a.click() })
+  const handleDownload = async (fileId: string, fileName: string) => {
+    setLoading(fileId)
+    try {
+      await downloadFile(report.id, fileId, fileName)
+    } finally {
+      setLoading(null)
+    }
   }
 
   return (
@@ -27,11 +26,12 @@ function DownloadButtons({ report, tFn }: { report: Report; tFn: (k: string) => 
       {report.output_files.map((f) => (
         <button
           key={f.id}
-          onClick={() => download(f.id, f.original_name)}
-          className="flex items-center gap-1 text-xs text-[#0B6B57] border border-[#0B6B57] px-2.5 py-1 rounded-lg hover:bg-[#0B6B57] hover:text-white transition-colors"
+          onClick={() => handleDownload(f.id, f.original_name)}
+          disabled={loading === f.id}
+          className="flex items-center gap-1 text-xs text-[#0B6B57] border border-[#0B6B57] px-2.5 py-1 rounded-lg hover:bg-[#0B6B57] hover:text-white transition-colors disabled:opacity-50"
         >
           <Download size={12} />
-          {f.original_name.endsWith('.pdf') ? 'PDF' : 'Excel'}
+          {loading === f.id ? '...' : f.original_name.endsWith('.pdf') ? 'PDF' : 'Excel'}
         </button>
       ))}
     </div>
@@ -242,7 +242,7 @@ export default function ReportsPage() {
                       <Eye size={13} /> {tCommon('view')}
                     </Link>
                     {r.status === 'completed' && r.output_files.length > 0 && (
-                      <DownloadButtons report={r} tFn={(k) => t(k)} />
+                      <DownloadButtons report={r} />
                     )}
                     {(r.status === 'pending' || r.status === 'processing') && (
                       <span className="text-xs text-gray-400 animate-pulse">{t('processing')}</span>
