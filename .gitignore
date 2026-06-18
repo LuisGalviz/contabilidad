@@ -1,0 +1,57 @@
+# ── Entorno y secretos ───────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.staging
+!.env.example
+
+# ── Python (backend) ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Herramientas de calidad
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Uploads locales del backend
+backend/uploads/
+
+# ── Node.js / Next.js (frontend) ─────────────────────────────────────────────
+node_modules/
+.next/
+out/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+.npm
+
+# ── Docker / datos locales ───────────────────────────────────────────────────
+postgres_data/
+minio_data/
+
+# ── Archivos de prueba generados ─────────────────────────────────────────────
+backend/scripts/test_files/
+
+# ── Sistema operativo ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo

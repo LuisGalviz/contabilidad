@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #0B6B57;
+  --brand-dark: #075446;
+  --accent: #C68A2D;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}

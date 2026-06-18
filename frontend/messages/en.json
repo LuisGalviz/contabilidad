@@ -1,0 +1,363 @@
+{
+  "meta": {
+    "title": "ContaFlow – Financial management for accountants",
+    "description": "SaaS platform to generate professional financial reports"
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Error",
+    "noData": "No data",
+    "all": "All",
+    "selected": "{count} selected",
+    "clearFilters": "Clear filters",
+    "download": "Download",
+    "view": "View",
+    "unexpectedError": "Unexpected error. Please try again."
+  },
+  "nav": {
+    "home": "Home",
+    "clients": "Clients",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Log out",
+    "brand": "ContaFlow",
+    "brandSub": "Financial management"
+  },
+  "landing": {
+    "login": "Log in",
+    "startFree": "Start for free",
+    "badge": "For professional accountants",
+    "headline": "Financial reports in minutes, not hours",
+    "subtitle": "Upload a trial balance or sales file and get financial statements, management reports and analyses ready to share with your client.",
+    "cta": "Create free account",
+    "modules": {
+      "sazon": { "title": "Restaurant Sazón", "desc": "Management report of sales, expenses, tips and operating result." },
+      "tlg": { "title": "Financial Statements", "desc": "Upload your trial balance and generate BSF, IS and management summary." },
+      "mensualizados": { "title": "Monthly reports", "desc": "Cumulative update of Balance Sheet and P&L period by period." }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "email": "Email address",
+      "emailPlaceholder": "you@email.com",
+      "password": "Password",
+      "passwordPlaceholder": "••••••••",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "error": "Incorrect email or password.",
+      "noAccount": "Don't have an account?",
+      "registerLink": "Register for free"
+    },
+    "register": {
+      "title": "Create your free account",
+      "name": "Your name",
+      "namePlaceholder": "John Smith",
+      "email": "Email address",
+      "emailPlaceholder": "you@email.com",
+      "password": "Password",
+      "passwordPlaceholder": "Minimum 8 characters",
+      "tenantName": "Your firm or company name",
+      "tenantNamePlaceholder": "Smith Accounting Firm",
+      "submit": "Create account",
+      "submitting": "Creating account...",
+      "error": "Could not create the account. Please check your details.",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in"
+    }
+  },
+  "dashboard": {
+    "badge": "Executive panel",
+    "greeting": "Welcome, {name}",
+    "subtitle": "{tenant} · Plan {plan}",
+    "kpis": {
+      "activeClients": "Active clients",
+      "totalReports": "Total reports",
+      "completed": "Completed",
+      "processing": "In progress"
+    },
+    "recentReports": "Recent reports",
+    "noReports": "No reports generated yet."
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "{count} active clients",
+    "new": "New client",
+    "formTitle": "New client",
+    "fields": {
+      "name": "Name / Company name",
+      "nit": "Tax ID",
+      "email": "Contact email",
+      "contactName": "Contact name",
+      "phone": "Phone"
+    },
+    "table": {
+      "name": "Name",
+      "nit": "Tax ID",
+      "email": "Contact email",
+      "phone": "Phone"
+    },
+    "loading": "Loading...",
+    "empty": "No clients yet. Create the first one."
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "{count} reports generated",
+    "new": "New report",
+    "formTitle": "Generate report",
+    "fields": {
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "type": "Report type",
+      "salesFile": "Sales file (.xlsx)",
+      "expensesFile": "Expenses file (.xlsx)",
+      "balanceFile": "Trial balance (.xlsx)",
+      "monthlyFiles": "Monthly balances (.xlsx)"
+    },
+    "hints": {
+      "sazon": "Upload 2 files: sales and expenses",
+      "tlg": "Upload 1 file: trial balance",
+      "mensualizados": "Upload one or several monthly balances"
+    },
+    "types": {
+      "sazon": "Restaurant Sazón",
+      "tlg": "TLG Financial Statements",
+      "mensualizados": "Monthly reports"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "table": {
+      "type": "Type",
+      "period": "Period",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Download"
+    },
+    "loading": "Loading...",
+    "empty": "No reports yet. Generate the first one.",
+    "processing": "Processing...",
+    "submit": "Generate report",
+    "submitting": "Sending..."
+  },
+  "reportDetail": {
+    "loading": "Loading report...",
+    "error": "Could not load the report.",
+    "period": "Period: {period}",
+    "generating": "Generating report, please wait...",
+    "failed": "Error:",
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "types": {
+      "sazon": "Restaurant Sazón",
+      "tlg": "The Latam Group",
+      "mensualizados": "Monthly reports"
+    },
+    "filters": {
+      "label": "Filters",
+      "month": "Month",
+      "seller": "Seller",
+      "payment": "Payment method",
+      "client": "Client"
+    },
+    "tabs": {
+      "summary": "Summary",
+      "monthly": "Monthly",
+      "payments": "Payments",
+      "sellers": "Sellers",
+      "clients": "Clients",
+      "tips": "Tips",
+      "courtesies": "Courtesies",
+      "expenses": "Expenses",
+      "downloads": "Downloads",
+      "validation": "Validation",
+      "balanceSheet": "Balance Sheet",
+      "incomeStatement": "Income Statement",
+      "management": "Management summary",
+      "managerDashboard": "Manager dashboard",
+      "financialStatements": "Financial Statements",
+      "thirdParty": "By third party"
+    },
+    "sazon": {
+      "kpis": {
+        "grossSales": "Gross sales",
+        "courtesies": "Courtesies granted",
+        "netSales": "Net sales",
+        "collected": "Actual collection",
+        "courtesyPct": "% courtesies on sales",
+        "totalExpenses": "Total expenses",
+        "estimatedProfit": "Estimated profit",
+        "estimatedMargin": "Estimated margin",
+        "totalTips": "Total tips",
+        "invoiceCount": "Number of invoices",
+        "avgTicket": "Average ticket"
+      },
+      "sections": {
+        "operatingResult": "Estimated operating result",
+        "salesVsExpenses": "Sales vs Expenses by month",
+        "profitByMonth": "Estimated profit by month",
+        "paymentDist": "Collection distribution",
+        "paymentChart": "Chart",
+        "sellerChart": "Sales by seller",
+        "sellerDetail": "Seller detail",
+        "topClients": "Top clients",
+        "tipsByMonth": "Tips by month",
+        "totalTips": "Total tips",
+        "tipsByCard": "Card tips",
+        "tipsCash": "Cash tips",
+        "totalCourtesies": "Total courtesies",
+        "courtesyPct": "% on gross sales",
+        "topCourtesyMonth": "Month with most courtesies",
+        "courtesyByMonth": "By month",
+        "courtesyBySeller": "By seller",
+        "totalExpenses": "Total expenses",
+        "topExpenseMonth": "Month with highest expenses",
+        "expenseRatio": "Expense / sales ratio",
+        "topProviders": "Top providers and concepts",
+        "expenseDetail": "Detail"
+      },
+      "cols": {
+        "month": "Month",
+        "grossSales": "Gross sales",
+        "courtesies": "Courtesies",
+        "netSales": "Net sales",
+        "collected": "Collected",
+        "tips": "Tips",
+        "expenses": "Expenses",
+        "estimatedProfit": "Est. profit",
+        "avgTicket": "Avg. ticket",
+        "invoiceCount": "# invoices",
+        "seller": "Seller",
+        "totalSales": "Total sales",
+        "netValue": "Net value",
+        "totalCourtesies": "Courtesies",
+        "numInvoices": "# invoices",
+        "client": "Client",
+        "numPurchases": "# purchases",
+        "totalSold": "Total sold",
+        "lastPurchase": "Last purchase",
+        "paymentMethod": "Payment method",
+        "value": "Value",
+        "participation": "Share",
+        "provider": "Provider / concept"
+      }
+    },
+    "tlg": {
+      "nit": "Tax ID: {nit} · {period}",
+      "cuadreOk": "Balance OK",
+      "cuadreWarn": "Review balance",
+      "cuadreError": "The balance difference exceeds $1,000. Review the mapping before issuing definitive financial statements.",
+      "kpis": {
+        "totalAssets": "Total assets",
+        "totalLiabilities": "Total liabilities",
+        "totalEquity": "Total equity",
+        "revenue": "Revenue",
+        "costs": "Costs",
+        "expenses": "Expenses",
+        "result": "Period result",
+        "difference": "Balance difference"
+      },
+      "cols": {
+        "code": "ACCOUNT CODE",
+        "name": "ACCOUNT NAME",
+        "classification": "CLASSIFICATION",
+        "openingBalance": "OPENING BALANCE",
+        "debit": "DEBIT MOVEMENT",
+        "credit": "CREDIT MOVEMENT",
+        "finalBalance": "FINAL BALANCE",
+        "validation": "Validation",
+        "result": "Result"
+      }
+    },
+    "mensualizados": {
+      "base": "Base: {source} · Updated to {period}",
+      "kpis": {
+        "sales": "Sales",
+        "grossProfit": "Gross profit",
+        "operatingProfit": "Operating profit",
+        "netResult": "Net result",
+        "ebitda": "EBITDA",
+        "currentRatio": "Current ratio",
+        "leverage": "Leverage",
+        "workingCapital": "Working capital"
+      },
+      "sections": {
+        "trend": "Monthly trend",
+        "margins": "Margins",
+        "monthlyIndicators": "Monthly indicators",
+        "processingControl": "Processing control",
+        "receivables": "Receivables (accounts 13)",
+        "payables": "Payables (accounts 21)",
+        "thirdPartyCount": "Third parties analyzed",
+        "receivablesChart": "Receivables by third party",
+        "payablesChart": "Payables by third party",
+        "activityChart": "Activity by third party"
+      },
+      "cols": {
+        "period": "Period",
+        "sales": "Sales",
+        "grossProfit": "Gross profit",
+        "operatingProfit": "Op. profit",
+        "result": "Result",
+        "assets": "Assets",
+        "liabilities": "Liabilities",
+        "diff": "Bal. diff.",
+        "third": "Third party",
+        "balance": "Balance",
+        "debits": "Debits",
+        "credits": "Credits",
+        "movement": "Movement"
+      },
+      "charts": {
+        "sales": "Sales",
+        "operatingProfit": "Operating profit",
+        "result": "Result",
+        "grossMargin": "Gross margin",
+        "operatingMargin": "Operating margin",
+        "netMargin": "Net margin"
+      }
+    }
+  },
+  "settings": {
+    "badge": "Settings",
+    "title": "My account",
+    "profile": {
+      "title": "Profile",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "name": "Name",
+      "plan": "Plan",
+      "maxClients": "Allowed clients",
+      "since": "Member since"
+    },
+    "plans": {
+      "free": "Free",
+      "professional": "Professional",
+      "enterprise": "Enterprise"
+    },
+    "upgrade": {
+      "title": "Upgrade plan",
+      "desc": "The free plan includes up to {max} clients. Upgrade to add more.",
+      "cta": "Coming soon"
+    },
+    "language": {
+      "title": "Language",
+      "es": "Español",
+      "en": "English"
+    }
+  }
+}

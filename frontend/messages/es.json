@@ -1,0 +1,363 @@
+{
+  "meta": {
+    "title": "ContaFlow – Gestión financiera para contadores",
+    "description": "Plataforma SaaS para generar informes financieros profesionales"
+  },
+  "common": {
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "error": "Error",
+    "noData": "Sin datos",
+    "all": "Todos",
+    "selected": "{count} seleccionados",
+    "clearFilters": "Limpiar filtros",
+    "download": "Descargar",
+    "view": "Ver",
+    "unexpectedError": "Error inesperado. Intenta de nuevo."
+  },
+  "nav": {
+    "home": "Inicio",
+    "clients": "Clientes",
+    "reports": "Informes",
+    "settings": "Configuración",
+    "logout": "Cerrar sesión",
+    "brand": "ContaFlow",
+    "brandSub": "Gestión financiera"
+  },
+  "landing": {
+    "login": "Iniciar sesión",
+    "startFree": "Empezar gratis",
+    "badge": "Para contadores profesionales",
+    "headline": "Informes financieros en minutos, no en horas",
+    "subtitle": "Sube un balance de prueba o archivo de ventas y obtén estados financieros, informes gerenciales y análisis listos para compartir con tu cliente.",
+    "cta": "Crear cuenta gratuita",
+    "modules": {
+      "sazon": { "title": "Restaurante Sazón", "desc": "Informe gerencial de ventas, gastos, propinas y resultado operativo." },
+      "tlg": { "title": "Estados Financieros", "desc": "Carga tu balance de prueba y genera ESF, ER y resumen gerencial." },
+      "mensualizados": { "title": "Informes mensualizados", "desc": "Actualización acumulativa de Balance y PYG periodo a periodo." }
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Inicia sesión en tu cuenta",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@correo.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "••••••••",
+      "submit": "Iniciar sesión",
+      "submitting": "Ingresando...",
+      "error": "Correo o contraseña incorrectos.",
+      "noAccount": "¿No tienes cuenta?",
+      "registerLink": "Regístrate gratis"
+    },
+    "register": {
+      "title": "Crea tu cuenta gratuita",
+      "name": "Tu nombre",
+      "namePlaceholder": "Juan Pérez",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@correo.com",
+      "password": "Contraseña",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "tenantName": "Nombre de tu estudio o empresa",
+      "tenantNamePlaceholder": "Estudio Contable Pérez",
+      "submit": "Crear cuenta",
+      "submitting": "Creando cuenta...",
+      "error": "No fue posible crear la cuenta. Verifica los datos.",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "loginLink": "Inicia sesión"
+    }
+  },
+  "dashboard": {
+    "badge": "Panel ejecutivo",
+    "greeting": "Bienvenido, {name}",
+    "subtitle": "{tenant} · Plan {plan}",
+    "kpis": {
+      "activeClients": "Clientes activos",
+      "totalReports": "Informes totales",
+      "completed": "Completados",
+      "processing": "En proceso"
+    },
+    "recentReports": "Informes recientes",
+    "noReports": "Aún no hay informes generados."
+  },
+  "clients": {
+    "title": "Clientes",
+    "subtitle": "{count} clientes activos",
+    "new": "Nuevo cliente",
+    "formTitle": "Nuevo cliente",
+    "fields": {
+      "name": "Nombre / Razón social",
+      "nit": "NIT",
+      "email": "Correo de contacto",
+      "contactName": "Nombre de contacto",
+      "phone": "Teléfono"
+    },
+    "table": {
+      "name": "Nombre",
+      "nit": "NIT",
+      "email": "Correo de contacto",
+      "phone": "Teléfono"
+    },
+    "loading": "Cargando...",
+    "empty": "Aún no tienes clientes. Crea el primero."
+  },
+  "reports": {
+    "title": "Informes",
+    "subtitle": "{count} informes generados",
+    "new": "Nuevo informe",
+    "formTitle": "Generar informe",
+    "fields": {
+      "client": "Cliente",
+      "clientPlaceholder": "Selecciona un cliente",
+      "type": "Tipo de informe",
+      "salesFile": "Archivo de ventas (.xlsx)",
+      "expensesFile": "Archivo de gastos (.xlsx)",
+      "balanceFile": "Balance de prueba (.xlsx)",
+      "monthlyFiles": "Balances mensuales (.xlsx)"
+    },
+    "hints": {
+      "sazon": "Sube 2 archivos: ventas y gastos",
+      "tlg": "Sube 1 archivo: balance de prueba",
+      "mensualizados": "Sube uno o varios balances por mes"
+    },
+    "types": {
+      "sazon": "Restaurante Sazón",
+      "tlg": "Estados Financieros TLG",
+      "mensualizados": "Informes mensualizados"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Error"
+    },
+    "table": {
+      "type": "Tipo",
+      "period": "Periodo",
+      "status": "Estado",
+      "created": "Creado",
+      "actions": "Descargar"
+    },
+    "loading": "Cargando...",
+    "empty": "Aún no hay informes. Genera el primero.",
+    "processing": "Procesando...",
+    "submit": "Generar informe",
+    "submitting": "Enviando..."
+  },
+  "reportDetail": {
+    "loading": "Cargando informe...",
+    "error": "No se pudo cargar el informe.",
+    "period": "Periodo: {period}",
+    "generating": "Generando informe, por favor espera...",
+    "failed": "Error:",
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Fallido"
+    },
+    "types": {
+      "sazon": "Restaurante Sazón",
+      "tlg": "The Latam Group",
+      "mensualizados": "Mensualizados"
+    },
+    "filters": {
+      "label": "Filtros",
+      "month": "Mes",
+      "seller": "Vendedor",
+      "payment": "Forma de pago",
+      "client": "Cliente"
+    },
+    "tabs": {
+      "summary": "Resumen",
+      "monthly": "Mensual",
+      "payments": "Pagos",
+      "sellers": "Vendedores",
+      "clients": "Clientes",
+      "tips": "Propinas",
+      "courtesies": "Cortesías",
+      "expenses": "Gastos",
+      "downloads": "Descargas",
+      "validation": "Validación",
+      "balanceSheet": "Situación Financiera",
+      "incomeStatement": "Estado de Resultados",
+      "management": "Resumen gerencial",
+      "managerDashboard": "Dashboard gerencial",
+      "financialStatements": "Estados Financieros",
+      "thirdParty": "Por tercero"
+    },
+    "sazon": {
+      "kpis": {
+        "grossSales": "Ventas brutas",
+        "courtesies": "Cortesías otorgadas",
+        "netSales": "Ventas netas",
+        "collected": "Recaudo real",
+        "courtesyPct": "% cortesías sobre ventas",
+        "totalExpenses": "Gastos acumulados",
+        "estimatedProfit": "Utilidad estimada",
+        "estimatedMargin": "Margen estimado",
+        "totalTips": "Total propinas",
+        "invoiceCount": "Número de facturas",
+        "avgTicket": "Ticket promedio"
+      },
+      "sections": {
+        "operatingResult": "Resultado operativo estimado",
+        "salesVsExpenses": "Ventas vs Gastos por mes",
+        "profitByMonth": "Utilidad estimada por mes",
+        "paymentDist": "Distribución de recaudo",
+        "paymentChart": "Gráfica",
+        "sellerChart": "Ventas por vendedor",
+        "sellerDetail": "Detalle por vendedor",
+        "topClients": "Top clientes",
+        "tipsByMonth": "Propinas por mes",
+        "totalTips": "Total propinas",
+        "tipsByCard": "Propinas en tarjeta",
+        "tipsCash": "Propinas en efectivo",
+        "totalCourtesies": "Cortesías acumuladas",
+        "courtesyPct": "% sobre ventas brutas",
+        "topCourtesyMonth": "Mes con más cortesías",
+        "courtesyByMonth": "Por mes",
+        "courtesyBySeller": "Por vendedor",
+        "totalExpenses": "Gastos acumulados",
+        "topExpenseMonth": "Mes con mayor gasto",
+        "expenseRatio": "Relación gastos / ventas",
+        "topProviders": "Top proveedores y conceptos",
+        "expenseDetail": "Detalle"
+      },
+      "cols": {
+        "month": "Mes",
+        "grossSales": "Ventas brutas",
+        "courtesies": "Cortesías",
+        "netSales": "Ventas netas",
+        "collected": "Recaudo real",
+        "tips": "Propinas",
+        "expenses": "Gastos",
+        "estimatedProfit": "Utilidad estimada",
+        "avgTicket": "Ticket promedio",
+        "invoiceCount": "N° facturas",
+        "seller": "Vendedor",
+        "totalSales": "Total ventas",
+        "netValue": "Valor neto",
+        "totalCourtesies": "Cortesías",
+        "numInvoices": "N° facturas",
+        "client": "Cliente",
+        "numPurchases": "N° compras",
+        "totalSold": "Total vendido",
+        "lastPurchase": "Última compra",
+        "paymentMethod": "Forma de pago",
+        "value": "Valor",
+        "participation": "Participación",
+        "provider": "Proveedor o concepto"
+      }
+    },
+    "tlg": {
+      "nit": "NIT: {nit} · {period}",
+      "cuadreOk": "Cuadre OK",
+      "cuadreWarn": "Revisar cuadre",
+      "cuadreError": "La diferencia de cuadre supera $1.000. Revisa el mapeo antes de emitir estados financieros definitivos.",
+      "kpis": {
+        "totalAssets": "Total activos",
+        "totalLiabilities": "Total pasivos",
+        "totalEquity": "Total patrimonio",
+        "revenue": "Ingresos",
+        "costs": "Costos",
+        "expenses": "Gastos",
+        "result": "Resultado del periodo",
+        "difference": "Diferencia de cuadre"
+      },
+      "cols": {
+        "code": "CODIGO_CUENTA",
+        "name": "NOMBRE_CUENTA",
+        "classification": "CLASIFICACION",
+        "openingBalance": "SALDO_INICIAL",
+        "debit": "MOVIMIENTO_DEBITO",
+        "credit": "MOVIMIENTO_CREDITO",
+        "finalBalance": "SALDO_FINAL",
+        "validation": "Validación",
+        "result": "Resultado"
+      }
+    },
+    "mensualizados": {
+      "base": "Base: {source} · Actualizado a {period}",
+      "kpis": {
+        "sales": "Ventas",
+        "grossProfit": "Utilidad bruta",
+        "operatingProfit": "Utilidad operacional",
+        "netResult": "Resultado neto",
+        "ebitda": "EBITDA",
+        "currentRatio": "Razón corriente",
+        "leverage": "Endeudamiento",
+        "workingCapital": "Capital de trabajo"
+      },
+      "sections": {
+        "trend": "Tendencia mensual",
+        "margins": "Márgenes",
+        "monthlyIndicators": "Indicadores mensuales",
+        "processingControl": "Control de procesamiento",
+        "receivables": "Cartera (cuentas 13)",
+        "payables": "Obligaciones (cuentas 21)",
+        "thirdPartyCount": "Terceros analizados",
+        "receivablesChart": "Cartera por tercero",
+        "payablesChart": "Obligaciones por tercero",
+        "activityChart": "Movimiento por tercero"
+      },
+      "cols": {
+        "period": "Periodo",
+        "sales": "Ventas",
+        "grossProfit": "Utilidad bruta",
+        "operatingProfit": "Utilidad operacional",
+        "result": "Resultado",
+        "assets": "Activos",
+        "liabilities": "Pasivos",
+        "diff": "Dif. cuadre",
+        "third": "Tercero",
+        "balance": "Saldo",
+        "debits": "Débitos",
+        "credits": "Créditos",
+        "movement": "Movimiento"
+      },
+      "charts": {
+        "sales": "Ventas",
+        "operatingProfit": "Utilidad operacional",
+        "result": "Resultado",
+        "grossMargin": "Margen bruto",
+        "operatingMargin": "Margen operacional",
+        "netMargin": "Margen neto"
+      }
+    }
+  },
+  "settings": {
+    "badge": "Configuración",
+    "title": "Mi cuenta",
+    "profile": {
+      "title": "Perfil",
+      "name": "Nombre",
+      "email": "Correo",
+      "role": "Rol"
+    },
+    "workspace": {
+      "title": "Espacio de trabajo",
+      "name": "Nombre",
+      "plan": "Plan",
+      "maxClients": "Clientes permitidos",
+      "since": "Miembro desde"
+    },
+    "plans": {
+      "free": "Gratuito",
+      "professional": "Profesional",
+      "enterprise": "Empresarial"
+    },
+    "upgrade": {
+      "title": "Actualizar plan",
+      "desc": "El plan gratuito incluye hasta {max} clientes. Actualiza para agregar más.",
+      "cta": "Próximamente"
+    },
+    "language": {
+      "title": "Idioma",
+      "es": "Español",
+      "en": "English"
+    }
+  }
+}
