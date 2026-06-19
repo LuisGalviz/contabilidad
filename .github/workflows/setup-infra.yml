@@ -1,17 +1,15 @@
-name: Setup AWS Infrastructure (run once)
+name: Setup RDS database (run once)
 
 on:
   workflow_dispatch:
 
 jobs:
-  setup:
-    name: Create ECS + RDS infrastructure
+  setup-rds:
+    name: Create RDS PostgreSQL
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -19,5 +17,54 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Run infrastructure setup
-        run: bash infra/setup-ecs.sh
+      - name: Create RDS PostgreSQL
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          set -e
+          REGION="us-east-1"
+
+          # Subnet group using default VPC subnets
+          SUBNETS=$(aws ec2 describe-subnets \
+            --filters Name=defaultForAz,Values=true \
+            --query "Subnets[*].SubnetId" \
+            --output text --region $REGION | tr '\t' ' ')
+
+          aws rds create-db-subnet-group \
+            --db-subnet-group-name contaflow-subnet-group \
+            --db-subnet-group-description "ContaFlow" \
+            --subnet-ids $SUBNETS --region $REGION 2>/dev/null || echo "subnet group already exists"
+
+          # Create RDS (free tier)
+          aws rds create-db-instance \
+            --db-instance-identifier contaflow-db \
+            --db-instance-class db.t3.micro \
+            --engine postgres \
+            --engine-version "16.4" \
+            --master-username contaflow \
+            --master-user-password "$DB_PASSWORD" \
+            --db-name contaflow \
+            --allocated-storage 20 \
+            --storage-type gp2 \
+            --publicly-accessible \
+            --no-multi-az \
+            --backup-retention-period 7 \
+            --region $REGION 2>/dev/null || echo "RDS instance already exists"
+
+          echo "Waiting for RDS (~5-10 min)..."
+          aws rds wait db-instance-available \
+            --db-instance-identifier contaflow-db --region $REGION
+
+          HOST=$(aws rds describe-db-instances \
+            --db-instance-identifier contaflow-db \
+            --query "DBInstances[0].Endpoint.Address" \
+            --output text --region $REGION)
+
+          echo ""
+          echo "====================================================="
+          echo "RDS ready. Add these 3 secrets to GitHub Actions:"
+          echo ""
+          echo "DATABASE_URL=postgresql+asyncpg://contaflow:${DB_PASSWORD}@${HOST}:5432/contaflow"
+          echo "APP_SECRET_KEY=$(openssl rand -hex 32)"
+          echo "JWT_SECRET_KEY=$(openssl rand -hex 32)"
+          echo "====================================================="

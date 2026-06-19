@@ -117,9 +117,99 @@ jobs:
           docker push $ECR_REGISTRY/contaflow-backend:$IMAGE_TAG
           docker push $ECR_REGISTRY/contaflow-backend:latest
 
-      - name: Force new ECS deployment
+      - name: Deploy to ECS
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
-          aws ecs update-service \
-            --cluster contaflow \
-            --service contaflow-backend \
-            --force-new-deployment
+          set -e
+          ACCOUNT="317132222530"
+          REGION="us-east-1"
+          IMAGE="$ECR_REGISTRY/contaflow-backend:$IMAGE_TAG"
+
+          # IAM execution role (idempotent)
+          aws iam create-role --role-name ecsTaskExecutionRole \
+            --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}' \
+            --region $REGION 2>/dev/null || true
+          aws iam attach-role-policy --role-name ecsTaskExecutionRole \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy \
+            2>/dev/null || true
+
+          # CloudWatch log group (idempotent)
+          aws logs create-log-group --log-group-name /ecs/contaflow-backend --region $REGION 2>/dev/null || true
+
+          # ECS cluster (idempotent)
+          aws ecs create-cluster --cluster-name contaflow --region $REGION 2>/dev/null || true
+
+          # Default VPC + subnets
+          VPC=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
+            --query "Vpcs[0].VpcId" --output text --region $REGION)
+          SUBNETS=$(aws ec2 describe-subnets --filters Name=defaultForAz,Values=true \
+            --query "Subnets[*].SubnetId" --output text --region $REGION | tr '\t' ',')
+
+          # Security group (idempotent)
+          SG=$(aws ec2 describe-security-groups \
+            --filters Name=group-name,Values=contaflow-ecs-sg Name=vpc-id,Values=$VPC \
+            --query "SecurityGroups[0].GroupId" --output text --region $REGION 2>/dev/null || echo "")
+          if [ -z "$SG" ] || [ "$SG" = "None" ]; then
+            SG=$(aws ec2 create-security-group \
+              --group-name contaflow-ecs-sg \
+              --description "ContaFlow ECS tasks" \
+              --vpc-id $VPC --query "GroupId" --output text --region $REGION)
+            aws ec2 authorize-security-group-ingress \
+              --group-id $SG --protocol tcp --port 8000 --cidr 0.0.0.0/0 --region $REGION 2>/dev/null || true
+          fi
+
+          # Task definition
+          TASK_ARN=$(aws ecs register-task-definition \
+            --family contaflow-backend \
+            --network-mode awsvpc \
+            --requires-compatibilities FARGATE \
+            --cpu 512 --memory 1024 \
+            --execution-role-arn arn:aws:iam::${ACCOUNT}:role/ecsTaskExecutionRole \
+            --region $REGION \
+            --container-definitions "[
+              {
+                \"name\": \"contaflow-backend\",
+                \"image\": \"${IMAGE}\",
+                \"portMappings\": [{\"containerPort\": 8000, \"protocol\": \"tcp\"}],
+                \"essential\": true,
+                \"environment\": [
+                  {\"name\": \"APP_ENV\",        \"value\": \"production\"},
+                  {\"name\": \"DATABASE_URL\",   \"value\": \"${DATABASE_URL}\"},
+                  {\"name\": \"APP_SECRET_KEY\", \"value\": \"${APP_SECRET_KEY}\"},
+                  {\"name\": \"JWT_SECRET_KEY\", \"value\": \"${JWT_SECRET_KEY}\"}
+                ],
+                \"logConfiguration\": {
+                  \"logDriver\": \"awslogs\",
+                  \"options\": {
+                    \"awslogs-group\": \"/ecs/contaflow-backend\",
+                    \"awslogs-region\": \"${REGION}\",
+                    \"awslogs-stream-prefix\": \"ecs\"
+                  }
+                }
+              }
+            ]" \
+            --query "taskDefinition.taskDefinitionArn" --output text)
+
+          # Create or update service
+          ACTIVE=$(aws ecs describe-services --cluster contaflow --services contaflow-backend \
+            --region $REGION --query "services[?status=='ACTIVE']|length(@)" --output text 2>/dev/null || echo 0)
+
+          if [ "$ACTIVE" = "1" ]; then
+            aws ecs update-service --cluster contaflow --service contaflow-backend \
+              --task-definition "$TASK_ARN" --force-new-deployment --region $REGION
+          else
+            aws ecs create-service \
+              --cluster contaflow \
+              --service-name contaflow-backend \
+              --task-definition "$TASK_ARN" \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SG}],assignPublicIp=ENABLED}" \
+              --health-check-grace-period-seconds 90 \
+              --region $REGION
+          fi
