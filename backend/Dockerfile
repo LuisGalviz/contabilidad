@@ -10,15 +10,10 @@ RUN pip install -e ".[dev]"
 COPY . .
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-FROM base AS builder
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-COPY src ./src
-
 FROM base AS production
-COPY --from=builder /app /app
-COPY --from=builder /usr/local/lib /usr/local/lib
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
+COPY src ./src
 RUN addgroup --system app && adduser --system --group app
 USER app
 EXPOSE 8000

@@ -46,8 +46,8 @@ export default function ReportsPage() {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['reports'],
     queryFn: () => reportApi.list(),
-    refetchInterval: (data) => {
-      const hasProcessing = data?.items?.some((r) => r.status === 'pending' || r.status === 'processing')
+    refetchInterval: (query) => {
+      const hasProcessing = query.state.data?.items?.some((r: Report) => r.status === 'pending' || r.status === 'processing')
       return hasProcessing ? 3000 : false
     },
   })

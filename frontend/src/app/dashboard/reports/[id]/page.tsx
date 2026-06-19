@@ -408,7 +408,7 @@ function SazonView({ meta, reportId, outputFiles }: { meta: any; reportId: strin
                 <SectionTitle>{t('sazon.sections.paymentChart')}</SectionTitle>
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie data={payments} dataKey="Valor" nameKey="Forma de pago" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={payments} dataKey="Valor" nameKey="Forma de pago" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
                       {payments.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip formatter={(v: any) => cop(v)} />
@@ -893,8 +893,8 @@ export default function ReportDetailPage() {
   const { data: report, isLoading, error } = useQuery({
     queryKey: ['report', id],
     queryFn: () => reportApi.get(id),
-    refetchInterval: (data) =>
-      data?.status === 'pending' || data?.status === 'processing' ? 2000 : false,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'pending' || query.state.data?.status === 'processing' ? 2000 : false,
   })
 
   if (isLoading) {
