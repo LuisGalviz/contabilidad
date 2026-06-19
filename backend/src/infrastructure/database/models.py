@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -76,7 +76,9 @@ class ReportModel(Base):
     period: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata_: Mapped[dict[str, object]] = mapped_column("metadata", JSONB, default=dict)
+    metadata_: Mapped[dict[str, object]] = mapped_column(
+        "metadata", JSON().with_variant(JSONB(), "postgresql"), default=dict
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
