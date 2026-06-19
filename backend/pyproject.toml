@@ -55,7 +55,13 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "TCH"]
 ignore = ["B008", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["TCH002", "TCH003"]
+"tests/**/*.py" = ["TCH001", "TCH002", "TCH003"]
+"src/presentation/**/*.py" = ["TCH001", "TCH002"]
+"src/infrastructure/reporting/**/*.py" = ["SIM", "N"]
+"src/application/use_cases/reports/generate_report.py" = ["SIM", "TCH001", "TCH002", "TCH003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
 
 [tool.mypy]
 python_version = "3.12"
