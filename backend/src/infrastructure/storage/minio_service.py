@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import boto3
 from botocore.config import Config
 
@@ -8,7 +10,7 @@ from src.config import get_settings
 settings = get_settings()
 
 
-def _client():
+def _client() -> Any:
     return boto3.client(
         "s3",
         endpoint_url=settings.storage_s3_endpoint_url or None,

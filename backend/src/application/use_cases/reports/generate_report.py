@@ -295,7 +295,7 @@ class GenerateReportUseCase:
             ReportFile(report_id=report.id, file_type="output_pdf", original_name="tlg_resumen.pdf", storage_key=pdf_key),
         ], metadata, detected_period
 
-    def _generate_mensualizados(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict]:
+    def _generate_mensualizados(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         from src.infrastructure.reporting.mensualizados.engine import build_monthly_reports, export_monthly_reports
 
         if not raw_files:
