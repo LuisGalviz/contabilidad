@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import uuid
 from dataclasses import dataclass
 from io import BytesIO
 from typing import TYPE_CHECKING
@@ -81,8 +80,9 @@ class GenerateReportUseCase:
         raise ValueError(f"Tipo de informe no soportado: {report.report_type}")
 
     def _generate_sazon(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
-        from src.infrastructure.reporting.sazon.cleaner import load_expenses_data, load_sales_data
+        import pandas as pd
         from src.infrastructure.reporting.sazon.aggregator import build_sazon_tables
+        from src.infrastructure.reporting.sazon.cleaner import load_expenses_data, load_sales_data
         from src.infrastructure.reporting.sazon.generator import (
             automatic_interpretation,
             build_excel_report,
@@ -90,7 +90,6 @@ class GenerateReportUseCase:
             format_cop,
             format_percent,
         )
-        import pandas as pd
 
         if len(raw_files) < 2:
             raise ValueError("El informe Sazón requiere dos archivos: ventas y gastos.")
@@ -240,8 +239,8 @@ class GenerateReportUseCase:
 
     def _generate_tlg(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         from src.infrastructure.reporting.tlg.cleaner import load_tlg_trial_balance
+        from src.infrastructure.reporting.tlg.generator import build_tlg_management_pdf, build_tlg_summary_excel
         from src.infrastructure.reporting.tlg.statements import build_tlg_financial_summary, build_tlg_management_text
-        from src.infrastructure.reporting.tlg.generator import build_tlg_summary_excel, build_tlg_management_pdf
 
         if not raw_files:
             raise ValueError("El informe TLG requiere el archivo de balance de prueba.")

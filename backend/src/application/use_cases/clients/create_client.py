@@ -7,7 +7,6 @@ import structlog
 
 from src.application.dtos.client import ClientResponse, CreateClientRequest
 from src.domain.entities.client import Client
-from src.domain.entities.tenant import TenantPlan
 from src.domain.repositories.client_repository import ClientRepository
 from src.domain.repositories.tenant_repository import TenantRepository
 
