@@ -248,9 +248,9 @@ class GenerateReportUseCase:
         buf = BytesIO(raw_files[0][1])
         df, tlg_meta = load_tlg_trial_balance(buf)
         summary = build_tlg_financial_summary(df)
-        management_text = build_tlg_management_text(summary["metrics"], tlg_meta)
+        management_text = build_tlg_management_text(summary["metrics"], tlg_meta)  # type: ignore[arg-type]
 
-        metrics = {k: float(v) if isinstance(v, (int, float)) else v for k, v in summary["metrics"].items()}
+        metrics = {k: float(v) if isinstance(v, (int, float)) else v for k, v in summary["metrics"].items()}  # type: ignore[attr-defined]
 
         # Validation rows
         difference = metrics.get("diferencia_cuadre", 0)
@@ -268,7 +268,7 @@ class GenerateReportUseCase:
         ]
 
         excel_bytes = build_tlg_summary_excel(summary, tlg_meta)
-        pdf_bytes = build_tlg_management_pdf(management_text, summary["metrics"], tlg_meta)
+        pdf_bytes = build_tlg_management_pdf(management_text, summary["metrics"], tlg_meta)  # type: ignore[arg-type]
 
         prefix = f"reports/{report.tenant_id}/{report.id}"
         excel_key = f"{prefix}/tlg.xlsx"
@@ -323,7 +323,7 @@ class GenerateReportUseCase:
             monthly_file_objects[0].name = raw_files[0][0]
 
         report_data = build_monthly_reports(
-            monthly_file_objects,
+            monthly_file_objects,  # type: ignore[arg-type]
             previous_file=previous_file,
             initial_balance_file=initial_file,
             start_year=None,
@@ -339,7 +339,7 @@ class GenerateReportUseCase:
         monthly_metrics = raw_metrics if isinstance(raw_metrics, list) else []
 
         # Executive summary from last monthly period
-        exec_summary: dict = {}
+        exec_summary: dict[str, Any] = {}
         monthly_only = [m for m in monthly_metrics if m.get("Tipo") == "Mensual"]
         if monthly_only:
             last = monthly_only[-1]

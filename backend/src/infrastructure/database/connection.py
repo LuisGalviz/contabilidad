@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from src.config import get_settings
@@ -10,7 +10,7 @@ class Base(DeclarativeBase):
     pass
 
 
-def _make_engine() -> object:
+def _make_engine() -> AsyncEngine:
     settings = get_settings()
     return create_async_engine(
         settings.database_url,
@@ -33,4 +33,4 @@ async def create_tables() -> None:
 
 async def get_session() -> AsyncSession:  # type: ignore[misc]
     async with AsyncSessionLocal() as session:
-        yield session  # type: ignore[misc]
+        yield session

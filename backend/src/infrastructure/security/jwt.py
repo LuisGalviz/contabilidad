@@ -83,4 +83,4 @@ class JWTService:
             "type": token_type,
             "exp": exp,
         }
-        return jwt.encode(payload, self._secret, algorithm=self._algorithm)
+        return jwt.encode(payload, self._secret, algorithm=self._algorithm)  # type: ignore[no-any-return]

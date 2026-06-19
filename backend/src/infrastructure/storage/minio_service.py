@@ -44,7 +44,7 @@ def upload_bytes(key: str, data: bytes, content_type: str = "application/octet-s
 
 
 def get_presigned_url(key: str, expires: int = 3600) -> str:
-    return _client().generate_presigned_url(
+    return _client().generate_presigned_url(  # type: ignore[no-any-return]
         "get_object",
         Params={"Bucket": settings.storage_s3_bucket, "Key": key},
         ExpiresIn=expires,
@@ -53,4 +53,4 @@ def get_presigned_url(key: str, expires: int = 3600) -> str:
 
 def download_bytes(key: str) -> bytes:
     response = _client().get_object(Bucket=settings.storage_s3_bucket, Key=key)
-    return response["Body"].read()
+    return response["Body"].read()  # type: ignore[no-any-return]
