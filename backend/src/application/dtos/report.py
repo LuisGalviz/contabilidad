@@ -28,7 +28,7 @@ class ReportResponse(BaseModel):
     error_message: str | None
     source_files: list[ReportFileResponse]
     output_files: list[ReportFileResponse]
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
     created_at: str
     updated_at: str
 
