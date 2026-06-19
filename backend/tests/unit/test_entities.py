@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from src.domain.entities.client import Client
 from src.domain.entities.report import Report, ReportStatus, ReportType
 from src.domain.entities.tenant import Tenant, TenantPlan, TenantStatus
 from src.domain.entities.user import User, UserRole, UserStatus
@@ -33,7 +32,10 @@ class TestUser:
     def test_contador_can_manage_own_tenant(self):
         import uuid
         tid = uuid.uuid4()
-        contador = User(email="c@b.com", name="C", hashed_password="x", role=UserRole.CONTADOR, tenant_id=tid)
+        contador = User(
+            email="c@b.com", name="C", hashed_password="x",
+            role=UserRole.CONTADOR, tenant_id=tid,
+        )
         assert contador.can_manage_tenant(tid)
         assert not contador.can_manage_tenant(uuid.uuid4())
 

@@ -3,7 +3,10 @@ from __future__ import annotations
 import re
 import unicodedata
 from io import BytesIO
-from typing import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Iterable
 
 import pandas as pd
 

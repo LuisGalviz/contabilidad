@@ -1,11 +1,14 @@
 ﻿from __future__ import annotations
 
+import re
 from copy import copy
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-import re
-from typing import BinaryIO
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import BinaryIO
 
 import pandas as pd
 from openpyxl import load_workbook

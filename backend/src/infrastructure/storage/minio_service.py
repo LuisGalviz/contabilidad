@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import boto3
 from botocore.config import Config
+
+if TYPE_CHECKING:
+    from typing import Any
 
 from src.config import get_settings
 

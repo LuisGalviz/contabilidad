@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import time
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import AsyncGenerator
 
 import structlog
 from fastapi import FastAPI, Request, Response
