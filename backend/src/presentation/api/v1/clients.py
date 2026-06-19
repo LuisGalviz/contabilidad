@@ -36,11 +36,11 @@ async def create_client(
         await session.commit()
         return result
     except TenantNotFoundError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ClientLimitReachedError as exc:
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc))
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
     except NitAlreadyExistsError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.get("", response_model=ClientListResponse)

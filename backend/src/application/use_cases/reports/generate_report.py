@@ -16,7 +16,7 @@ from src.infrastructure.storage.minio_service import upload_bytes
 logger = structlog.get_logger()
 
 
-def _df_to_records(df: Any, max_rows: int | None = None) -> list[dict]:
+def _df_to_records(df: Any, max_rows: int | None = None) -> list[dict[str, Any]]:
     """Convert a pandas DataFrame to a JSON-serializable list of dicts."""
     try:
         import pandas as pd
@@ -68,7 +68,7 @@ class GenerateReportUseCase:
             report.error_message = str(exc)
             await self._update_status(report, ReportStatus.FAILED)
 
-    def _run_sync(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict, str]:
+    def _run_sync(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         if report.report_type == ReportType.SAZON:
             return self._generate_sazon(report, raw_files)
         if report.report_type == ReportType.TLG:
@@ -77,7 +77,7 @@ class GenerateReportUseCase:
             return self._generate_mensualizados(report, raw_files)
         raise ValueError(f"Tipo de informe no soportado: {report.report_type}")
 
-    def _generate_sazon(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict]:
+    def _generate_sazon(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         from src.infrastructure.reporting.sazon.cleaner import load_expenses_data, load_sales_data
         from src.infrastructure.reporting.sazon.aggregator import build_sazon_tables
         from src.infrastructure.reporting.sazon.generator import (
@@ -235,7 +235,7 @@ class GenerateReportUseCase:
             ReportFile(report_id=report.id, file_type="output_pdf", original_name="informe_sazon.pdf", storage_key=pdf_key),
         ], metadata, detected_period
 
-    def _generate_tlg(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict]:
+    def _generate_tlg(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         from src.infrastructure.reporting.tlg.cleaner import load_tlg_trial_balance
         from src.infrastructure.reporting.tlg.statements import build_tlg_financial_summary, build_tlg_management_text
         from src.infrastructure.reporting.tlg.generator import build_tlg_summary_excel, build_tlg_management_pdf

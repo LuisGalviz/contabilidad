@@ -23,10 +23,10 @@ class CurrentUser:
 def _decode(credentials: HTTPAuthorizationCredentials = Depends(_bearer)) -> TokenPayload:
     try:
         payload = _jwt.decode(credentials.credentials)
-    except TokenExpiredError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Token expired")
-    except InvalidTokenError:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except TokenExpiredError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Token expired") from exc
+    except InvalidTokenError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     if payload.type != "access":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")

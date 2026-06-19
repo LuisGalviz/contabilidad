@@ -35,7 +35,7 @@ async def register(
         await session.commit()
         return result
     except EmailAlreadyExistsError as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -51,7 +51,7 @@ async def login(
     try:
         return await use_case.execute(body)
     except (InvalidCredentialsError, InactiveUserError) as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=str(exc))
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
 
 
 @router.get("/me", response_model=UserResponse)

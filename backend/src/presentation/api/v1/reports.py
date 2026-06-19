@@ -8,14 +8,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.application.dtos.report import CreateReportRequest, ReportListResponse, ReportResponse
+from src.application.dtos.report import CreateReportRequest, ReportFileResponse, ReportListResponse, ReportResponse
 from src.application.use_cases.reports.create_report import (
     ClientNotFoundError,
     ClientNotInTenantError,
     CreateReportUseCase,
 )
 from src.application.use_cases.reports.generate_report import GenerateReportUseCase
-from src.domain.entities.report import ReportType
+from src.domain.entities.report import Report, ReportType
 from src.infrastructure.database.connection import get_session
 from src.infrastructure.repositories.client_repository import SQLClientRepository
 from src.infrastructure.repositories.report_repository import SQLReportRepository
@@ -47,9 +47,9 @@ async def create_report(
         result = await use_case.execute(current.tenant_id, current.user_id, request)
         await session.commit()
     except ClientNotFoundError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ClientNotInTenantError as exc:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc))
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
 
     raw_files = [(f.filename or f"file_{i}.xlsx", await f.read()) for i, f in enumerate(files)]
 
@@ -132,9 +132,7 @@ async def download_report_file(
     )
 
 
-def _to_response(report):
-    from src.application.dtos.report import ReportFileResponse, ReportResponse
-
+def _to_response(report: Report) -> ReportResponse:
     return ReportResponse(
         id=str(report.id),
         client_id=str(report.client_id),
