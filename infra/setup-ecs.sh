@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # ContaFlow – ECS + RDS one-time infrastructure setup
-# Run with admin credentials: AWS_PROFILE=admin bash infra/setup-ecs.sh
 set -euo pipefail
 
 ACCOUNT_ID="317132222530"
@@ -13,13 +12,15 @@ DB_INSTANCE="contaflow-db"
 DB_NAME="contaflow"
 DB_USER="contaflow"
 DB_PASS="$(openssl rand -base64 32 | tr -d '/+=\n' | head -c 32)"
+APP_SECRET="$(openssl rand -hex 32)"
+JWT_SECRET="$(openssl rand -hex 32)"
 
 echo "=========================================="
 echo " ContaFlow ECS infrastructure setup"
 echo "=========================================="
 
 # ── 1. IAM execution role ───────────────────────────────────────────────────
-echo "[1/9] IAM execution role..."
+echo "[1/8] IAM execution role..."
 aws iam create-role \
   --role-name ecsTaskExecutionRole \
   --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}' \
@@ -30,13 +31,8 @@ aws iam attach-role-policy \
   --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy \
   2>/dev/null || echo "  policy already attached"
 
-aws iam put-role-policy \
-  --role-name ecsTaskExecutionRole \
-  --policy-name ssm-secrets \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"ssm:GetParameters\",\"ssm:GetParameter\"],\"Resource\":\"arn:aws:ssm:${REGION}:${ACCOUNT_ID}:parameter/contaflow/*\"}]}"
-
 # ── 2. CloudWatch log group ─────────────────────────────────────────────────
-echo "[2/9] CloudWatch log group..."
+echo "[2/8] CloudWatch log group..."
 aws logs create-log-group \
   --log-group-name /ecs/contaflow-backend \
   --region "$REGION" 2>/dev/null || echo "  log group already exists"
@@ -44,18 +40,18 @@ aws logs create-log-group \
 aws logs put-retention-policy \
   --log-group-name /ecs/contaflow-backend \
   --retention-in-days 30 \
-  --region "$REGION"
+  --region "$REGION" 2>/dev/null || true
 
 # ── 3. ECS cluster ──────────────────────────────────────────────────────────
-echo "[3/9] ECS cluster..."
+echo "[3/8] ECS cluster..."
 aws ecs create-cluster \
   --cluster-name "$CLUSTER" \
   --capacity-providers FARGATE FARGATE_SPOT \
   --region "$REGION" \
-  --output json | python3 -c "import sys,json; c=json.load(sys.stdin)['cluster']; print(f\"  ARN: {c['clusterArn']}\")"
+  --output json | python3 -c "import sys,json; c=json.load(sys.stdin)['cluster']; print(f\"  {c['clusterArn']}\")"
 
 # ── 4. VPC / subnets ────────────────────────────────────────────────────────
-echo "[4/9] VPC info..."
+echo "[4/8] VPC info..."
 VPC_ID=$(aws ec2 describe-vpcs \
   --filters "Name=isDefault,Values=true" \
   --query "Vpcs[0].VpcId" \
@@ -66,11 +62,10 @@ SUBNET_IDS=$(aws ec2 describe-subnets \
   --query "Subnets[*].SubnetId" \
   --output text --region "$REGION" | tr '\t' ',')
 
-echo "  VPC: $VPC_ID"
-echo "  Subnets: $SUBNET_IDS"
+echo "  VPC: $VPC_ID  Subnets: $SUBNET_IDS"
 
 # ── 5. Security groups ──────────────────────────────────────────────────────
-echo "[5/9] Security groups..."
+echo "[5/8] Security groups..."
 
 ECS_SG=$(aws ec2 create-security-group \
   --group-name contaflow-ecs-sg \
@@ -98,20 +93,18 @@ aws ec2 authorize-security-group-ingress \
   --group-id "$RDS_SG" --protocol tcp --port 5432 \
   --source-group "$ECS_SG" --region "$REGION" 2>/dev/null || true
 
-echo "  ECS SG: $ECS_SG"
-echo "  RDS SG: $RDS_SG"
+echo "  ECS SG: $ECS_SG  RDS SG: $RDS_SG"
 
-# ── 6. RDS subnet group ─────────────────────────────────────────────────────
-echo "[6/9] RDS subnet group..."
+# ── 6. RDS PostgreSQL ───────────────────────────────────────────────────────
+echo "[6/8] RDS PostgreSQL (free tier, ~5-10 min)..."
 SUBNET_ARRAY=$(echo "$SUBNET_IDS" | tr ',' ' ')
+
 aws rds create-db-subnet-group \
   --db-subnet-group-name contaflow-subnet-group \
   --db-subnet-group-description "ContaFlow subnets" \
   --subnet-ids $SUBNET_ARRAY \
   --region "$REGION" 2>/dev/null || echo "  subnet group already exists"
 
-# ── 7. RDS PostgreSQL ───────────────────────────────────────────────────────
-echo "[7/9] RDS PostgreSQL (free tier, ~5 min)..."
 aws rds create-db-instance \
   --db-instance-identifier "$DB_INSTANCE" \
   --db-instance-class db.t3.micro \
@@ -129,7 +122,7 @@ aws rds create-db-instance \
   --backup-retention-period 7 \
   --region "$REGION" 2>/dev/null || echo "  RDS instance already exists"
 
-echo "  Waiting for RDS to become available (this takes 5-10 min)..."
+echo "  Waiting for RDS to become available..."
 aws rds wait db-instance-available \
   --db-instance-identifier "$DB_INSTANCE" \
   --region "$REGION"
@@ -142,18 +135,8 @@ DB_HOST=$(aws rds describe-db-instances \
 DATABASE_URL="postgresql+asyncpg://${DB_USER}:${DB_PASS}@${DB_HOST}:5432/${DB_NAME}"
 echo "  Host: $DB_HOST"
 
-# ── 8. SSM secrets ─────────────────────────────────────────────────────────
-echo "[8/9] SSM Parameter Store secrets..."
-APP_SECRET=$(openssl rand -hex 32)
-JWT_SECRET=$(openssl rand -hex 32)
-
-aws ssm put-parameter --name "/contaflow/DATABASE_URL"   --value "$DATABASE_URL"  --type SecureString --overwrite --region "$REGION"
-aws ssm put-parameter --name "/contaflow/APP_SECRET_KEY" --value "$APP_SECRET"    --type SecureString --overwrite --region "$REGION"
-aws ssm put-parameter --name "/contaflow/JWT_SECRET_KEY" --value "$JWT_SECRET"    --type SecureString --overwrite --region "$REGION"
-echo "  Secrets stored in /contaflow/*"
-
-# ── 9. Task definition + ECS service ───────────────────────────────────────
-echo "[9/9] Task definition and ECS service..."
+# ── 7. Task definition ──────────────────────────────────────────────────────
+echo "[7/8] Task definition..."
 aws ecs register-task-definition \
   --family "$FAMILY" \
   --network-mode awsvpc \
@@ -168,14 +151,12 @@ aws ecs register-task-definition \
       \"image\": \"${IMAGE}\",
       \"portMappings\": [{\"containerPort\": 8000, \"protocol\": \"tcp\"}],
       \"essential\": true,
-      \"secrets\": [
-        {\"name\": \"DATABASE_URL\",   \"valueFrom\": \"/contaflow/DATABASE_URL\"},
-        {\"name\": \"APP_SECRET_KEY\", \"valueFrom\": \"/contaflow/APP_SECRET_KEY\"},
-        {\"name\": \"JWT_SECRET_KEY\", \"valueFrom\": \"/contaflow/JWT_SECRET_KEY\"}
-      ],
       \"environment\": [
-        {\"name\": \"APP_ENV\",   \"value\": \"production\"},
-        {\"name\": \"APP_DEBUG\", \"value\": \"false\"}
+        {\"name\": \"APP_ENV\",        \"value\": \"production\"},
+        {\"name\": \"APP_DEBUG\",      \"value\": \"false\"},
+        {\"name\": \"DATABASE_URL\",   \"value\": \"${DATABASE_URL}\"},
+        {\"name\": \"APP_SECRET_KEY\", \"value\": \"${APP_SECRET}\"},
+        {\"name\": \"JWT_SECRET_KEY\", \"value\": \"${JWT_SECRET}\"}
       ],
       \"logConfiguration\": {
         \"logDriver\": \"awslogs\",
@@ -193,8 +174,10 @@ aws ecs register-task-definition \
         \"startPeriod\": 60
       }
     }
-  ]" --output json | python3 -c "import sys,json; td=json.load(sys.stdin)['taskDefinition']; print(f\"  Task def: {td['family']}:{td['revision']}\")"
+  ]" --output json | python3 -c "import sys,json; td=json.load(sys.stdin)['taskDefinition']; print(f\"  {td['family']}:{td['revision']}\")"
 
+# ── 8. ECS service ──────────────────────────────────────────────────────────
+echo "[8/8] ECS service..."
 aws ecs create-service \
   --cluster "$CLUSTER" \
   --service-name "$SERVICE" \
@@ -204,7 +187,7 @@ aws ecs create-service \
   --network-configuration "awsvpcConfiguration={subnets=[${SUBNET_IDS}],securityGroups=[${ECS_SG}],assignPublicIp=ENABLED}" \
   --health-check-grace-period-seconds 90 \
   --region "$REGION" \
-  --output json | python3 -c "import sys,json; s=json.load(sys.stdin)['service']; print(f\"  Service ARN: {s['serviceArn']}\")"
+  --output json | python3 -c "import sys,json; s=json.load(sys.stdin)['service']; print(f\"  {s['serviceArn']}\")"
 
 echo ""
 echo "=========================================="
@@ -212,9 +195,5 @@ echo " Setup complete!"
 echo " Cluster : $CLUSTER"
 echo " Service : $SERVICE"
 echo " DB Host : $DB_HOST"
-echo " Logs    : /ecs/contaflow-backend (CloudWatch)"
-echo ""
-echo " Task public IP visible en:"
-echo "   aws ecs list-tasks --cluster $CLUSTER --region $REGION"
-echo " -> aws ecs describe-tasks --cluster $CLUSTER --tasks <task-id> --region $REGION"
+echo " Logs    : CloudWatch > /ecs/contaflow-backend"
 echo "=========================================="
