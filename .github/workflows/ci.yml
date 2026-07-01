@@ -213,3 +213,43 @@ jobs:
               --health-check-grace-period-seconds 90 \
               --region $REGION
           fi
+
+      # ECS Fargate (sin load balancer) asigna una IP pública nueva a cada
+      # tarea reemplazada — sin este paso, BACKEND_URL en Vercel queda
+      # apuntando a una IP muerta después de cada deploy y el frontend
+      # empieza a devolver 502 en todas las llamadas a la API.
+      - name: Detectar IP pública de la nueva tarea ECS
+        id: ecs-ip
+        run: |
+          set -e
+          REGION="us-east-1"
+
+          aws ecs wait services-stable --cluster contaflow --services contaflow-backend --region $REGION
+
+          TASK_ARN=$(aws ecs list-tasks --cluster contaflow --service-name contaflow-backend \
+            --desired-status RUNNING --region $REGION --query "taskArns[0]" --output text)
+
+          ENI_ID=$(aws ecs describe-tasks --cluster contaflow --tasks "$TASK_ARN" --region $REGION \
+            --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value | [0]" --output text)
+
+          PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids "$ENI_ID" --region $REGION \
+            --query "NetworkInterfaces[0].Association.PublicIp" --output text)
+
+          if [ -z "$PUBLIC_IP" ] || [ "$PUBLIC_IP" = "None" ]; then
+            echo "::error::No se pudo determinar la IP pública de la tarea ECS ($TASK_ARN, ENI $ENI_ID)."
+            exit 1
+          fi
+
+          echo "backend_url=http://${PUBLIC_IP}:8000" >> "$GITHUB_OUTPUT"
+
+      - name: Actualizar BACKEND_URL en Vercel y redesplegar frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          BACKEND_URL: ${{ steps.ecs-ip.outputs.backend_url }}
+        working-directory: frontend
+        run: |
+          set -e
+          npx --yes vercel@latest link --yes --project contabilidad --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest env rm BACKEND_URL production --yes --token="$VERCEL_TOKEN" || true
+          echo -n "$BACKEND_URL" | npx --yes vercel@latest env add BACKEND_URL production --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN"

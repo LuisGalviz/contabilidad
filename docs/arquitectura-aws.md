@@ -158,7 +158,9 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
         "ecs:RegisterTaskDefinition",
         "ecs:DescribeServices",
         "ecs:UpdateService",
-        "ecs:CreateService"
+        "ecs:CreateService",
+        "ecs:ListTasks",
+        "ecs:DescribeTasks"
       ],
       "Resource": "*"
     },
@@ -170,7 +172,8 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
         "ec2:DescribeSubnets",
         "ec2:DescribeSecurityGroups",
         "ec2:CreateSecurityGroup",
-        "ec2:AuthorizeSecurityGroupIngress"
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:DescribeNetworkInterfaces"
       ],
       "Resource": "*"
     },
@@ -248,10 +251,19 @@ GitHub Actions (CI/CD)
         ├─ docker build → imagen production
         ├─ docker push → ECR :latest + :<sha>
         ├─ aws ecs register-task-definition (nueva revisión)
-        └─ aws ecs update-service → reemplaza el contenedor en ejecución
+        ├─ aws ecs update-service → reemplaza el contenedor en ejecución
+        ├─ aws ecs wait services-stable
+        ├─ detecta la IP pública de la nueva tarea (ENI → EC2 describe-network-interfaces)
+        └─ actualiza BACKEND_URL en Vercel (proyecto `contabilidad`) y redespliega el frontend
 ```
 
 El deploy es **rolling** — ECS lanza el nuevo contenedor, espera que esté healthy, y solo entonces detiene el anterior. Con `desired_count=1` hay un breve momento de downtime durante el cambio.
+
+**Por qué el paso de `BACKEND_URL`:** no hay load balancer delante de ECS, así que cada tarea nueva recibe una IP pública distinta (ver sección VPC más abajo). El frontend en Vercel usa `BACKEND_URL` como destino del rewrite `/api/v1/*` (`frontend/next.config.ts`). Sin actualizarla en cada deploy, la IP queda obsoleta y todas las llamadas a la API devuelven 502 hasta el siguiente deploy manual. Este paso automatiza esa actualización — es un parche sobre la arquitectura actual, no la solución de raíz (que sería un Application Load Balancer con DNS estable delante de ECS).
+
+**Permisos IAM adicionales que requiere este paso** (sobre la política mínima ya descrita más abajo): `ecs:ListTasks`, `ecs:DescribeTasks`, `ec2:DescribeNetworkInterfaces`.
+
+**Secrets de GitHub Actions adicionales:** `VERCEL_TOKEN` (token de acceso personal de Vercel con permiso sobre el proyecto `contabilidad`).
 
 ---
 
