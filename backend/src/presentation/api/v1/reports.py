@@ -38,6 +38,12 @@ async def create_report(
     if not current.tenant_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
 
+    if report_type in (ReportType.PURCHASES_GENERAL, ReportType.PURCHASES_SECTOR):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Este tipo de informe se genera automáticamente y no admite carga manual.",
+        )
+
     request = CreateReportRequest(client_id=client_id, report_type=report_type, period=period)
     use_case = CreateReportUseCase(
         report_repo=SQLReportRepository(session),

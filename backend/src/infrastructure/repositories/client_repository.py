@@ -52,6 +52,8 @@ class SQLClientRepository(ClientRepository):
             existing.contact_email = client.contact_email
             existing.contact_name = client.contact_name
             existing.contact_phone = client.contact_phone
+            existing.economic_activity = client.economic_activity
+            existing.ciiu_code = client.ciiu_code
             existing.is_active = client.is_active
             await self._session.flush()
             return _to_domain(existing)
@@ -64,6 +66,8 @@ class SQLClientRepository(ClientRepository):
             contact_email=client.contact_email,
             contact_name=client.contact_name,
             contact_phone=client.contact_phone,
+            economic_activity=client.economic_activity,
+            ciiu_code=client.ciiu_code,
             is_active=client.is_active,
             created_at=client.created_at,
             updated_at=client.updated_at,
@@ -88,6 +92,8 @@ def _to_domain(model: ClientModel) -> Client:
         contact_email=model.contact_email,
         contact_name=model.contact_name,
         contact_phone=model.contact_phone,
+        economic_activity=model.economic_activity,
+        ciiu_code=model.ciiu_code,
         is_active=model.is_active,
         created_at=model.created_at,
         updated_at=model.updated_at,

@@ -5,11 +5,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { clientApi } from '@/lib/api'
 import { apiError } from '@/lib/errors'
+import { SECTOR_KEYS } from '@/types'
 import { Plus, Trash2 } from 'lucide-react'
 
 export default function ClientsPage() {
   const t = useTranslations('clients')
   const tCommon = useTranslations('common')
+  const tSectors = useTranslations('sectors')
   const qc = useQueryClient()
   const { data, isLoading } = useQuery({ queryKey: ['clients'], queryFn: clientApi.list })
   const [showForm, setShowForm] = useState(false)
@@ -28,6 +30,12 @@ export default function ClientsPage() {
 
   const deactivate = useMutation({
     mutationFn: clientApi.deactivate,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
+  })
+
+  const updateSector = useMutation({
+    mutationFn: ({ id, economic_activity }: { id: string; economic_activity: string }) =>
+      clientApi.update(id, { economic_activity }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clients'] }),
   })
 
@@ -98,7 +106,7 @@ export default function ClientsPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
-              {[t('table.name'), t('table.nit'), t('table.email'), t('table.phone'), ''].map((h) => (
+              {[t('table.name'), t('table.nit'), t('table.email'), t('table.phone'), t('table.sector'), ''].map((h) => (
                 <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
@@ -110,6 +118,20 @@ export default function ClientsPage() {
                 <td className="px-6 py-4 text-gray-500">{c.nit}</td>
                 <td className="px-6 py-4 text-gray-500">{c.contact_email}</td>
                 <td className="px-6 py-4 text-gray-500">{c.contact_phone || '—'}</td>
+                <td className="px-6 py-4">
+                  <select
+                    value={c.economic_activity}
+                    onChange={(e) => updateSector.mutate({ id: c.id, economic_activity: e.target.value })}
+                    className="border border-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-[#0B6B57]"
+                  >
+                    <option value="">{t('sectorPlaceholder')}</option>
+                    {SECTOR_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {tSectors(key)}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => deactivate.mutate(c.id)}

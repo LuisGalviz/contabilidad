@@ -3,11 +3,21 @@ from __future__ import annotations
 import asyncio
 import math
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from src.domain.entities.causation_entry import CausationEntry
+    from src.domain.entities.client import Client
+    from src.domain.entities.puc_account import PUCAccount
+    from src.domain.entities.supplier_invoice import SupplierInvoice
+    from src.domain.repositories.causation_entry_repository import CausationEntryRepository
+    from src.domain.repositories.client_repository import ClientRepository
+    from src.domain.repositories.puc_account_repository import PUCAccountRepository
+    from src.domain.repositories.supplier_invoice_repository import SupplierInvoiceRepository
 
 import structlog
 
@@ -48,15 +58,25 @@ def _df_to_records(df: Any, max_rows: int | None = None) -> list[dict[str, Any]]
 @dataclass
 class GenerateReportUseCase:
     report_repo: ReportRepository
+    # Only used by the two purchases-causación report types below — the
+    # three original types (sazon/tlg/mensualizados) never touch these and
+    # keep working with just `report_repo`, as before.
+    client_repo: ClientRepository | None = None
+    invoice_repo: SupplierInvoiceRepository | None = None
+    causation_repo: CausationEntryRepository | None = None
+    puc_account_repo: PUCAccountRepository | None = None
 
     async def execute(self, report: Report, raw_files: list[tuple[str, bytes]]) -> None:
         """Process uploaded files and generate output files. Updates report status in DB."""
         try:
             await self._update_status(report, ReportStatus.PROCESSING)
 
-            output_files, metadata, detected_period = await asyncio.get_event_loop().run_in_executor(
-                None, self._run_sync, report, raw_files
-            )
+            if report.report_type in (ReportType.PURCHASES_GENERAL, ReportType.PURCHASES_SECTOR):
+                output_files, metadata, detected_period = await self._generate_purchases_report(report)
+            else:
+                output_files, metadata, detected_period = await asyncio.get_event_loop().run_in_executor(
+                    None, self._run_sync, report, raw_files
+                )
 
             report.metadata = metadata
             if detected_period:
@@ -78,6 +98,87 @@ class GenerateReportUseCase:
         if report.report_type == ReportType.MENSUALIZADOS:
             return self._generate_mensualizados(report, raw_files)
         raise ValueError(f"Tipo de informe no soportado: {report.report_type}")
+
+    async def _generate_purchases_report(self, report: Report) -> tuple[list[ReportFile], dict[str, Any], str]:
+        """PURCHASES_GENERAL / PURCHASES_SECTOR: unlike the other three types,
+        these read from the causación data already in the DB for the given
+        client + period instead of parsing uploaded files. Never triggered by
+        the manual upload form — see the guard in
+        `presentation/api/v1/reports.py::create_report` — always system-
+        triggered right after `GenerateCausationEntriesUseCase` finishes.
+        """
+        if not (self.client_repo and self.invoice_repo and self.causation_repo and self.puc_account_repo):
+            raise ValueError("Purchases report generation requires client/invoice/causation/puc repositories")
+
+        client = await self.client_repo.get_by_id(report.client_id)
+        if client is None:
+            raise ValueError(f"Client {report.client_id} not found")
+
+        period = report.period or datetime.now(timezone.utc).strftime("%Y-%m")
+        invoices = await self.invoice_repo.list_by_client_and_period(report.tenant_id, report.client_id, period)
+        causation_entries = await self.causation_repo.list_by_client_and_period(report.tenant_id, report.client_id, period)
+        accounts = await self.puc_account_repo.list_active()
+        accounts_by_code = {a.code: a for a in accounts}
+
+        return await asyncio.get_event_loop().run_in_executor(
+            None, self._render_purchases_report, report, client, period, invoices, causation_entries, accounts_by_code
+        )
+
+    def _render_purchases_report(
+        self,
+        report: Report,
+        client: Client,
+        period: str,
+        invoices: list[SupplierInvoice],
+        causation_entries: list[CausationEntry],
+        accounts_by_code: dict[str, PUCAccount],
+    ) -> tuple[list[ReportFile], dict[str, Any], str]:
+        from src.infrastructure.reporting.sector_templates.generic_template import GenericSectorTemplate
+        from src.infrastructure.reporting.sector_templates.registry import resolve_template
+
+        template = (
+            resolve_template(client) if report.report_type == ReportType.PURCHASES_SECTOR else GenericSectorTemplate()
+        )
+
+        kpis = template.compute_kpis(period, invoices, causation_entries, accounts_by_code)
+        chart_series = template.compute_chart_series(kpis)
+        narrative = template.phrase_narrative(client, kpis)
+
+        excel_bytes = template.build_excel(kpis, chart_series)
+        pdf_bytes = template.build_pdf(client, kpis, chart_series, narrative)
+
+        suffix = "general" if report.report_type == ReportType.PURCHASES_GENERAL else "sector"
+        prefix = f"reports/{report.tenant_id}/{report.id}"
+        excel_key = f"{prefix}/purchases_{suffix}.xlsx"
+        pdf_key = f"{prefix}/purchases_{suffix}.pdf"
+        upload_bytes(excel_key, excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        upload_bytes(pdf_key, pdf_bytes, "application/pdf")
+
+        metadata = {
+            "period": period,
+            "sector_key": template.sector_key,
+            "total_amount": float(kpis.total_amount),
+            "invoice_count": kpis.invoice_count,
+            "auto_classified_share": kpis.auto_classified_share,
+            "by_category": chart_series["by_category"],
+            "top_suppliers": chart_series["top_suppliers"],
+            "narrative": narrative,
+        }
+
+        return [
+            ReportFile(
+                report_id=report.id,
+                file_type="output_excel",
+                original_name=f"informe_compras_{suffix}.xlsx",
+                storage_key=excel_key,
+            ),
+            ReportFile(
+                report_id=report.id,
+                file_type="output_pdf",
+                original_name=f"informe_compras_{suffix}.pdf",
+                storage_key=pdf_key,
+            ),
+        ], metadata, period
 
     def _generate_sazon(self, report: Report, raw_files: list[tuple[str, bytes]]) -> tuple[list[ReportFile], dict[str, Any], str]:
         import pandas as pd

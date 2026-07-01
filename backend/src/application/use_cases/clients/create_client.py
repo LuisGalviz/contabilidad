@@ -65,6 +65,8 @@ class CreateClientUseCase:
             contact_email=saved.contact_email,
             contact_name=saved.contact_name,
             contact_phone=saved.contact_phone,
+            economic_activity=saved.economic_activity,
+            ciiu_code=saved.ciiu_code,
             is_active=saved.is_active,
             created_at=saved.created_at.isoformat(),
         )

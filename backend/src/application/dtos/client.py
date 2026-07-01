@@ -16,6 +16,8 @@ class UpdateClientRequest(BaseModel):
     contact_email: EmailStr | None = None
     contact_name: str | None = Field(default=None, max_length=120)
     contact_phone: str | None = Field(default=None, max_length=20)
+    economic_activity: str | None = Field(default=None, max_length=50)
+    ciiu_code: str | None = Field(default=None, max_length=10)
 
 
 class ClientResponse(BaseModel):
@@ -26,6 +28,8 @@ class ClientResponse(BaseModel):
     contact_email: str
     contact_name: str
     contact_phone: str
+    economic_activity: str = ""
+    ciiu_code: str = ""
     is_active: bool
     created_at: str
 

@@ -883,6 +883,68 @@ function MensualizadosView({ meta, reportId, outputFiles }: { meta: any; reportI
   )
 }
 
+function PurchasesReportView({ meta, reportId, outputFiles }: { meta: any; reportId: string; outputFiles: any[] }) {
+  const t = useTranslations('reportDetail')
+  const tCommon = useTranslations('common')
+  const byCategory: { label: string; value: number }[] = meta?.by_category ?? []
+  const topSuppliers: { label: string; value: number }[] = meta?.top_suppliers ?? []
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+        <KpiCard label={t('purchases.total')} value={cop(meta?.total_amount ?? 0)} />
+        <KpiCard label={t('purchases.invoices')} value={num(meta?.invoice_count ?? 0)} />
+        <KpiCard label={t('purchases.autoClassified')} value={pct(meta?.auto_classified_share ?? 0)} />
+        <KpiCard label={t('purchases.period')} value={meta?.period ?? '—'} />
+      </div>
+
+      <SectionTitle>{t('purchases.byCategory')}</SectionTitle>
+      {byCategory.length > 0 ? (
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={byCategory}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={60} />
+            <YAxis tickFormatter={(v) => cop(v)} width={90} tick={{ fontSize: 10 }} />
+            <Tooltip formatter={(v: any) => cop(v)} />
+            <Bar dataKey="value" fill="#0B6B57" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-xs text-gray-400">{tCommon('noData')}</p>
+      )}
+
+      <SectionTitle>{t('purchases.topSuppliers')}</SectionTitle>
+      {topSuppliers.length > 0 ? (
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie data={topSuppliers} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={80} label>
+              {topSuppliers.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(v: any) => cop(v)} />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-xs text-gray-400">{tCommon('noData')}</p>
+      )}
+
+      <SectionTitle>{t('purchases.narrative')}</SectionTitle>
+      <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 border border-gray-200 rounded-xl p-4">
+        {meta?.narrative}
+      </p>
+
+      <SectionTitle>{tCommon('downloads')}</SectionTitle>
+      <div className="flex flex-wrap gap-3 pt-2">
+        {outputFiles.map((f) => (
+          <DownloadBtn key={f.id} reportId={reportId} file={f} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ReportDetailPage() {
@@ -956,6 +1018,9 @@ export default function ReportDetailPage() {
           )}
           {report.report_type === 'mensualizados' && (
             <MensualizadosView meta={report.metadata} reportId={report.id} outputFiles={report.output_files} />
+          )}
+          {(report.report_type === 'purchases_general' || report.report_type === 'purchases_sector') && (
+            <PurchasesReportView meta={report.metadata} reportId={report.id} outputFiles={report.output_files} />
           )}
         </div>
       )}

@@ -10,6 +10,11 @@ class ReportType(str, Enum):
     SAZON = "sazon"
     TLG = "tlg"
     MENSUALIZADOS = "mensualizados"
+    # System-generated only (see purchases causación feature) — never created
+    # via the manual multipart `POST /api/v1/reports` upload flow, see the
+    # guard in `presentation/api/v1/reports.py::create_report`.
+    PURCHASES_GENERAL = "purchases_general"
+    PURCHASES_SECTOR = "purchases_sector"
 
 
 class ReportStatus(str, Enum):

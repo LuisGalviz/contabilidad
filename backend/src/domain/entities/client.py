@@ -14,6 +14,8 @@ class Client:
     id: UUID = field(default_factory=uuid4)
     contact_name: str = ""
     contact_phone: str = ""
+    economic_activity: str = ""
+    ciiu_code: str = ""
     is_active: bool = True
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -26,4 +28,9 @@ class Client:
         self.contact_name = name
         self.contact_email = email
         self.contact_phone = phone
+        self.updated_at = datetime.now(timezone.utc)
+
+    def update_economic_activity(self, economic_activity: str, ciiu_code: str = "") -> None:
+        self.economic_activity = economic_activity
+        self.ciiu_code = ciiu_code
         self.updated_at = datetime.now(timezone.utc)

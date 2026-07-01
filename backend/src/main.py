@@ -15,7 +15,7 @@ from prometheus_client import Counter, Histogram, generate_latest
 
 from src.config import get_settings
 from src.infrastructure.database.connection import create_tables
-from src.presentation.api.v1 import auth, clients, reports, tenants, users
+from src.presentation.api.v1 import auth, clients, purchases, reports, tenants, users
 
 logger = structlog.get_logger()
 
@@ -68,6 +68,8 @@ def create_app() -> FastAPI:
     app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
     app.include_router(clients.router, prefix="/api/v1/clients", tags=["clients"])
     app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
+    app.include_router(purchases.router, prefix="/api/v1/purchases", tags=["purchases"])
+    app.include_router(purchases.puc_router, prefix="/api/v1/puc", tags=["puc"])
 
     @app.get("/health", tags=["observability"])
     async def health_check() -> dict[str, str]:

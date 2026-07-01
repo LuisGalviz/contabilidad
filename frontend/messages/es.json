@@ -20,6 +20,7 @@
   "nav": {
     "home": "Inicio",
     "clients": "Clientes",
+    "purchases": "Compras",
     "reports": "Informes",
     "settings": "Configuración",
     "logout": "Cerrar sesión",
@@ -92,16 +93,23 @@
       "nit": "NIT",
       "email": "Correo de contacto",
       "contactName": "Nombre de contacto",
-      "phone": "Teléfono"
+      "phone": "Teléfono",
+      "sector": "Actividad económica"
     },
     "table": {
       "name": "Nombre",
       "nit": "NIT",
       "email": "Correo de contacto",
-      "phone": "Teléfono"
+      "phone": "Teléfono",
+      "sector": "Sector"
     },
+    "sectorPlaceholder": "Sin definir",
     "loading": "Cargando...",
     "empty": "Aún no tienes clientes. Crea el primero."
+  },
+  "sectors": {
+    "restaurante": "Restaurante",
+    "generico": "Genérico / otro"
   },
   "reports": {
     "title": "Informes",
@@ -125,7 +133,9 @@
     "types": {
       "sazon": "Restaurante Sazón",
       "tlg": "Estados Financieros TLG",
-      "mensualizados": "Informes mensualizados"
+      "mensualizados": "Informes mensualizados",
+      "purchases_general": "Informe general de compras",
+      "purchases_sector": "Informe personalizado de compras"
     },
     "status": {
       "pending": "Pendiente",
@@ -161,7 +171,18 @@
     "types": {
       "sazon": "Restaurante Sazón",
       "tlg": "The Latam Group",
-      "mensualizados": "Mensualizados"
+      "mensualizados": "Mensualizados",
+      "purchases_general": "Informe general de compras",
+      "purchases_sector": "Informe personalizado de compras"
+    },
+    "purchases": {
+      "total": "Total comprado",
+      "invoices": "Facturas causadas",
+      "autoClassified": "Clasificado automático",
+      "period": "Periodo",
+      "byCategory": "¿En qué se fue la plata?",
+      "topSuppliers": "Principales proveedores",
+      "narrative": "En palabras simples"
     },
     "filters": {
       "label": "Filtros",
@@ -327,6 +348,88 @@
         "netMargin": "Margen neto"
       }
     }
+  },
+  "purchases": {
+    "title": "Compras y causación",
+    "subtitle": "{count} cargas de facturas DIAN",
+    "new": "Subir Excel de la DIAN",
+    "formTitle": "Subir documentos recibidos de la DIAN",
+    "fields": {
+      "client": "Cliente",
+      "clientPlaceholder": "Selecciona un cliente",
+      "file": "Excel de documentos recibidos (.xlsx)"
+    },
+    "submit": "Subir",
+    "submitting": "Subiendo...",
+    "loading": "Cargando...",
+    "empty": "Aún no has subido facturas de la DIAN.",
+    "table": {
+      "file": "Archivo",
+      "status": "Estado",
+      "new": "Nuevas",
+      "duplicates": "Duplicadas",
+      "errors": "Con error",
+      "created": "Subido",
+      "actions": ""
+    },
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Error"
+    },
+    "batch": {
+      "title": "Carga de facturas",
+      "back": "Volver a compras",
+      "summary": "{total} filas · {new} nuevas · {duplicates} duplicadas · {errors} con error",
+      "reviewCta": "Revisar y clasificar facturas",
+      "causationTitle": "Causación del periodo",
+      "period": "Periodo (AAAA-MM)",
+      "generateCausation": "Generar causación",
+      "generating": "Generando causación e informes en segundo plano...",
+      "generateHint": "Clasifica las facturas antes de generar la causación. El sistema generará automáticamente el informe general y el personalizado del periodo.",
+      "generateSuccess": "Causación en proceso. Los informes aparecerán en Informes cuando estén listos.",
+      "viewInvoices": "Ver facturas de esta carga"
+    }
+  },
+  "invoiceReview": {
+    "title": "Revisión de facturas",
+    "subtitle": "{count} facturas",
+    "empty": "No hay facturas para revisar.",
+    "filters": {
+      "client": "Cliente",
+      "status": "Estado"
+    },
+    "status": {
+      "pending_review": "Por revisar",
+      "classified": "Clasificada",
+      "caused": "Causada",
+      "rejected": "Rechazada",
+      "error": "Error"
+    },
+    "confidence": {
+      "auto_high_confidence": "Sugerencia confiable",
+      "auto_low_confidence": "Sugerencia a confirmar",
+      "manual": "Clasificada manualmente",
+      "none": "Sin sugerencia"
+    },
+    "table": {
+      "supplier": "Proveedor",
+      "concept": "Concepto",
+      "amount": "Total",
+      "suggestion": "Sugerencia",
+      "account": "Cuenta",
+      "actions": "Acciones"
+    },
+    "actions": {
+      "accept": "Aceptar sugerencia",
+      "confirm": "Confirmar cuenta",
+      "reject": "Rechazar",
+      "bulkConfirm": "Confirmar seleccionadas",
+      "selectAccount": "Selecciona una cuenta"
+    },
+    "learned": "El sistema recordará esta clasificación para las próximas facturas de este proveedor.",
+    "rejectPrompt": "Motivo del rechazo"
   },
   "settings": {
     "badge": "Configuración",

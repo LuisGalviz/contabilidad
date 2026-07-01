@@ -20,6 +20,7 @@
   "nav": {
     "home": "Home",
     "clients": "Clients",
+    "purchases": "Purchases",
     "reports": "Reports",
     "settings": "Settings",
     "logout": "Log out",
@@ -92,16 +93,23 @@
       "nit": "Tax ID",
       "email": "Contact email",
       "contactName": "Contact name",
-      "phone": "Phone"
+      "phone": "Phone",
+      "sector": "Economic activity"
     },
     "table": {
       "name": "Name",
       "nit": "Tax ID",
       "email": "Contact email",
-      "phone": "Phone"
+      "phone": "Phone",
+      "sector": "Sector"
     },
+    "sectorPlaceholder": "Not set",
     "loading": "Loading...",
     "empty": "No clients yet. Create the first one."
+  },
+  "sectors": {
+    "restaurante": "Restaurant",
+    "generico": "Generic / other"
   },
   "reports": {
     "title": "Reports",
@@ -125,7 +133,9 @@
     "types": {
       "sazon": "Restaurant Sazón",
       "tlg": "TLG Financial Statements",
-      "mensualizados": "Monthly reports"
+      "mensualizados": "Monthly reports",
+      "purchases_general": "General purchases report",
+      "purchases_sector": "Personalized purchases report"
     },
     "status": {
       "pending": "Pending",
@@ -161,7 +171,18 @@
     "types": {
       "sazon": "Restaurant Sazón",
       "tlg": "The Latam Group",
-      "mensualizados": "Monthly reports"
+      "mensualizados": "Monthly reports",
+      "purchases_general": "General purchases report",
+      "purchases_sector": "Personalized purchases report"
+    },
+    "purchases": {
+      "total": "Total purchased",
+      "invoices": "Invoices posted",
+      "autoClassified": "Auto-classified",
+      "period": "Period",
+      "byCategory": "Where did the money go?",
+      "topSuppliers": "Top suppliers",
+      "narrative": "In plain words"
     },
     "filters": {
       "label": "Filters",
@@ -327,6 +348,88 @@
         "netMargin": "Net margin"
       }
     }
+  },
+  "purchases": {
+    "title": "Purchases & causación",
+    "subtitle": "{count} DIAN invoice uploads",
+    "new": "Upload DIAN Excel",
+    "formTitle": "Upload DIAN received documents",
+    "fields": {
+      "client": "Client",
+      "clientPlaceholder": "Select a client",
+      "file": "Received documents Excel (.xlsx)"
+    },
+    "submit": "Upload",
+    "submitting": "Uploading...",
+    "loading": "Loading...",
+    "empty": "You haven't uploaded any DIAN invoices yet.",
+    "table": {
+      "file": "File",
+      "status": "Status",
+      "new": "New",
+      "duplicates": "Duplicates",
+      "errors": "Errors",
+      "created": "Uploaded",
+      "actions": ""
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "batch": {
+      "title": "Invoice batch",
+      "back": "Back to purchases",
+      "summary": "{total} rows · {new} new · {duplicates} duplicates · {errors} errors",
+      "reviewCta": "Review and classify invoices",
+      "causationTitle": "Period causación",
+      "period": "Period (YYYY-MM)",
+      "generateCausation": "Generate causación",
+      "generating": "Generating causación and reports in the background...",
+      "generateHint": "Classify invoices before generating causación. The system will automatically generate the general and personalized reports for the period.",
+      "generateSuccess": "Causación in progress. Reports will appear under Reports once ready.",
+      "viewInvoices": "View invoices in this batch"
+    }
+  },
+  "invoiceReview": {
+    "title": "Invoice review",
+    "subtitle": "{count} invoices",
+    "empty": "No invoices to review.",
+    "filters": {
+      "client": "Client",
+      "status": "Status"
+    },
+    "status": {
+      "pending_review": "Pending review",
+      "classified": "Classified",
+      "caused": "Posted",
+      "rejected": "Rejected",
+      "error": "Error"
+    },
+    "confidence": {
+      "auto_high_confidence": "Reliable suggestion",
+      "auto_low_confidence": "Suggestion to confirm",
+      "manual": "Manually classified",
+      "none": "No suggestion"
+    },
+    "table": {
+      "supplier": "Supplier",
+      "concept": "Concept",
+      "amount": "Total",
+      "suggestion": "Suggestion",
+      "account": "Account",
+      "actions": "Actions"
+    },
+    "actions": {
+      "accept": "Accept suggestion",
+      "confirm": "Confirm account",
+      "reject": "Reject",
+      "bulkConfirm": "Confirm selected",
+      "selectAccount": "Select an account"
+    },
+    "learned": "The system will remember this classification for this supplier's future invoices.",
+    "rejectPrompt": "Rejection reason"
   },
   "settings": {
     "badge": "Settings",
