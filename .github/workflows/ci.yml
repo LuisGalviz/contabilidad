@@ -302,7 +302,10 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           BACKEND_URL: ${{ steps.ecs-ip.outputs.backend_url }}
-        working-directory: frontend
+        # Se ejecuta desde la raíz del repo, no desde frontend/: el proyecto en
+        # Vercel tiene Root Directory = "frontend" y lo resuelve relativo al
+        # directorio de trabajo, así que correrlo dentro de frontend/ produce
+        # la ruta duplicada frontend/frontend y el deploy falla.
         run: |
           set -e
           npx --yes vercel@latest link --yes --project contabilidad --token="$VERCEL_TOKEN"
