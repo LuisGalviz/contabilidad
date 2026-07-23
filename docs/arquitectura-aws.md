@@ -97,9 +97,14 @@ Base de datos PostgreSQL gestionada por AWS.
 | Engine | PostgreSQL 16.4 |
 | Instancia | db.t3.micro |
 | Storage | 20 GB gp2 |
-| Backups | 7 días de retención |
+| Backups | 1 día de retención |
 | Multi-AZ | No (single-AZ) |
 | Acceso público | Sí (`publicly-accessible = true`) |
+| Security group | `contaflow-rds-sg` — 5432 solo desde `contaflow-ecs-sg` |
+
+**Sobre la retención de 1 día:** el plan Free Tier actual de AWS rechaza valores mayores con `FreeTierRestrictionError`. Al salir del Free Tier conviene subirla a 7.
+
+**Migraciones:** el contenedor no las aplica al arrancar. El deploy ejecuta `alembic upgrade head` como tarea ECS puntual antes de rotar el servicio; si falla, el deploy se aborta y el servicio anterior sigue en pie.
 
 **Problema de seguridad:** RDS está configurado como `publicly-accessible`, lo que significa que tiene una IP pública y es accesible desde internet. Está protegido solo por usuario y contraseña. Una mejora futura sería ponerlo en una subnet privada y permitir solo conexiones desde el security group de ECS.
 
@@ -140,6 +145,9 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
       "Effect": "Allow",
       "Action": [
         "ecr:GetAuthorizationToken",
+        "ecr:CreateRepository",
+        "ecr:DescribeRepositories",
+        "ecr:PutLifecyclePolicy",
         "ecr:BatchCheckLayerAvailability",
         "ecr:GetDownloadUrlForLayer",
         "ecr:BatchGetImage",
@@ -156,6 +164,7 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
       "Action": [
         "ecs:CreateCluster",
         "ecs:RegisterTaskDefinition",
+        "ecs:RunTask",
         "ecs:DescribeServices",
         "ecs:UpdateService",
         "ecs:CreateService",
@@ -178,6 +187,12 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
       "Resource": "*"
     },
     {
+      "Sid": "RDS",
+      "Effect": "Allow",
+      "Action": ["rds:DescribeDBInstances"],
+      "Resource": "*"
+    },
+    {
       "Sid": "IAM",
       "Effect": "Allow",
       "Action": [
@@ -185,13 +200,13 @@ Usado por GitHub Actions para hacer deploys. Sus credenciales (`AWS_ACCESS_KEY_I
         "iam:AttachRolePolicy",
         "iam:PassRole"
       ],
-      "Resource": "arn:aws:iam::317132222530:role/contaflow-exec-role"
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/contaflow-exec-role"
     },
     {
       "Sid": "Logs",
       "Effect": "Allow",
-      "Action": ["logs:CreateLogGroup"],
-      "Resource": "arn:aws:logs:us-east-1:317132222530:log-group:/ecs/contaflow-backend"
+      "Action": ["logs:CreateLogGroup", "logs:PutRetentionPolicy"],
+      "Resource": "arn:aws:logs:us-east-1:<ACCOUNT_ID>:log-group:/ecs/contaflow-backend"
     }
   ]
 }

@@ -14,6 +14,11 @@ FROM base AS production
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 COPY src ./src
+# Alembic ya es dependencia de runtime, pero sin estos archivos el contenedor
+# no puede aplicar migraciones. El deploy corre "alembic upgrade head" como
+# tarea ECS puntual antes de rotar el servicio.
+COPY alembic.ini .
+COPY alembic ./alembic
 RUN addgroup --system app && adduser --system --group app
 USER app
 EXPOSE 8000

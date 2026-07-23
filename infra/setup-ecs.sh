@@ -2,8 +2,8 @@
 # ContaFlow – ECS + RDS one-time infrastructure setup
 set -euo pipefail
 
-ACCOUNT_ID="317132222530"
 REGION="us-east-1"
+ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text --region "$REGION")"
 CLUSTER="contaflow"
 SERVICE="contaflow-backend"
 FAMILY="contaflow-backend"

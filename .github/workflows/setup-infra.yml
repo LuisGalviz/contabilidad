@@ -24,10 +24,12 @@ jobs:
           set -e
           REGION="us-east-1"
 
-          # Subnet group using default VPC subnets
+          # Subnet group using default VPC subnets.
+          # us-east-1e no ofrece db.t3.micro — si entra en el subnet group, la
+          # creación de la instancia falla por AZ sin capacidad.
           SUBNETS=$(aws ec2 describe-subnets \
             --filters Name=defaultForAz,Values=true \
-            --query "Subnets[*].SubnetId" \
+            --query "Subnets[?AvailabilityZone!='us-east-1e'].SubnetId" \
             --output text --region $REGION | tr '\t' ' ')
 
           aws rds create-db-subnet-group \
@@ -35,20 +37,37 @@ jobs:
             --db-subnet-group-description "ContaFlow" \
             --subnet-ids $SUBNETS --region $REGION 2>/dev/null || echo "subnet group already exists"
 
-          # Create RDS (free tier)
+          # Security group propio del RDS. Sin esto la instancia hereda el SG
+          # default de la VPC, que no permite entrada desde las tareas ECS.
+          VPC=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
+            --query "Vpcs[0].VpcId" --output text --region $REGION)
+          RDS_SG=$(aws ec2 describe-security-groups \
+            --filters Name=group-name,Values=contaflow-rds-sg Name=vpc-id,Values=$VPC \
+            --query "SecurityGroups[0].GroupId" --output text --region $REGION 2>/dev/null || echo "")
+          if [ -z "$RDS_SG" ] || [ "$RDS_SG" = "None" ]; then
+            RDS_SG=$(aws ec2 create-security-group \
+              --group-name contaflow-rds-sg --description "ContaFlow RDS" \
+              --vpc-id $VPC --query GroupId --output text --region $REGION)
+          fi
+
+          # Create RDS (free tier).
+          # backup-retention-period: el plan Free Tier nuevo rechaza valores
+          # altos con FreeTierRestrictionError — 1 día es el máximo permitido.
           aws rds create-db-instance \
             --db-instance-identifier contaflow-db \
             --db-instance-class db.t3.micro \
             --engine postgres \
-            --engine-version "16.4" \
+            --engine-version "16.14" \
             --master-username contaflow \
             --master-user-password "$DB_PASSWORD" \
             --db-name contaflow \
             --allocated-storage 20 \
             --storage-type gp2 \
+            --vpc-security-group-ids $RDS_SG \
+            --db-subnet-group-name contaflow-subnet-group \
             --publicly-accessible \
             --no-multi-az \
-            --backup-retention-period 7 \
+            --backup-retention-period 1 \
             --region $REGION 2>/dev/null || echo "RDS instance already exists"
 
           echo "Waiting for RDS (~5-10 min)..."

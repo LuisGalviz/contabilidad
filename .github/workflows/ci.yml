@@ -106,6 +106,17 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # El repositorio ECR no lo creaba ningún script — se creó a mano la
+      # primera vez. Al migrar de cuenta AWS eso deja el pipeline roto, así
+      # que se crea aquí de forma idempotente.
+      - name: Asegurar repositorio ECR
+        run: |
+          aws ecr describe-repositories --repository-names contaflow-backend --region us-east-1 >/dev/null 2>&1 \
+            || aws ecr create-repository --repository-name contaflow-backend --region us-east-1
+          aws ecr put-lifecycle-policy \
+            --repository-name contaflow-backend --region us-east-1 \
+            --lifecycle-policy-text '{"rules":[{"rulePriority":1,"description":"Mantener solo las ultimas 10 imagenes","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":10},"action":{"type":"expire"}}]}' >/dev/null
+
       - name: Build, tag and push image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -126,8 +137,10 @@ jobs:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
           set -e
-          ACCOUNT="317132222530"
           REGION="us-east-1"
+          # Se deriva de las credenciales del CI en vez de hardcodearlo, para
+          # que el pipeline funcione sin cambios al migrar de cuenta AWS.
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
           IMAGE="$ECR_REGISTRY/contaflow-backend:$IMAGE_TAG"
 
           # IAM execution role (idempotent)
@@ -140,6 +153,8 @@ jobs:
 
           # CloudWatch log group (idempotent)
           aws logs create-log-group --log-group-name /ecs/contaflow-backend --region $REGION 2>/dev/null || true
+          aws logs put-retention-policy --log-group-name /ecs/contaflow-backend \
+            --retention-in-days 30 --region $REGION 2>/dev/null || true
 
           # ECS cluster (idempotent)
           aws ecs create-cluster --cluster-name contaflow --region $REGION 2>/dev/null || true
@@ -147,8 +162,12 @@ jobs:
           # Default VPC + subnets
           VPC=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true \
             --query "Vpcs[0].VpcId" --output text --region $REGION)
+          # us-east-1e no ofrece capacidad Fargate: si su subnet entra en la
+          # lista, create-service falla de forma intermitente al programar la
+          # tarea en esa AZ. Se excluye explícitamente.
           SUBNETS=$(aws ec2 describe-subnets --filters Name=defaultForAz,Values=true \
-            --query "Subnets[*].SubnetId" --output text --region $REGION | tr '\t' ',')
+            --query "Subnets[?AvailabilityZone!='us-east-1e'].SubnetId" \
+            --output text --region $REGION | tr '\t' ',')
 
           # Security group (idempotent)
           SG=$(aws ec2 describe-security-groups \
@@ -161,6 +180,18 @@ jobs:
               --vpc-id $VPC --query "GroupId" --output text --region $REGION)
             aws ec2 authorize-security-group-ingress \
               --group-id $SG --protocol tcp --port 8000 --cidr 0.0.0.0/0 --region $REGION 2>/dev/null || true
+          fi
+
+          # El security group del RDS no conoce al de ECS: sin esta regla las
+          # tareas Fargate no pueden abrir la conexión a Postgres y el
+          # contenedor muere en el arranque. Idempotente.
+          RDS_SG=$(aws rds describe-db-instances --db-instance-identifier contaflow-db \
+            --query "DBInstances[0].VpcSecurityGroups[0].VpcSecurityGroupId" \
+            --output text --region $REGION 2>/dev/null || echo "")
+          if [ -n "$RDS_SG" ] && [ "$RDS_SG" != "None" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$RDS_SG" --protocol tcp --port 5432 \
+              --source-group "$SG" --region $REGION 2>/dev/null || true
           fi
 
           # Task definition
@@ -194,6 +225,31 @@ jobs:
               }
             ]" \
             --query "taskDefinition.taskDefinitionArn" --output text)
+
+          # Migraciones Alembic antes de rotar el servicio.
+          # Se ejecutan como tarea puntual en Fargate y no desde el runner de
+          # Actions: la IP del runner es dinámica, y abrir el 5432 del RDS a
+          # 0.0.0.0/0 para cada deploy sería peor. La tarea usa el mismo SG de
+          # ECS, que ya es el único origen autorizado en el SG del RDS.
+          MIGRATION_TASK=$(aws ecs run-task \
+            --cluster contaflow \
+            --task-definition "$TASK_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SG}],assignPublicIp=ENABLED}" \
+            --overrides '{"containerOverrides":[{"name":"contaflow-backend","command":["alembic","upgrade","head"]}]}' \
+            --region $REGION --query "tasks[0].taskArn" --output text)
+
+          echo "Migración lanzada: $MIGRATION_TASK"
+          aws ecs wait tasks-stopped --cluster contaflow --tasks "$MIGRATION_TASK" --region $REGION
+
+          MIGRATION_EXIT=$(aws ecs describe-tasks --cluster contaflow --tasks "$MIGRATION_TASK" \
+            --region $REGION --query "tasks[0].containers[0].exitCode" --output text)
+
+          if [ "$MIGRATION_EXIT" != "0" ]; then
+            echo "::error::Las migraciones fallaron (exit ${MIGRATION_EXIT}). Revisa CloudWatch /ecs/contaflow-backend. No se rota el servicio."
+            exit 1
+          fi
+          echo "Migraciones aplicadas correctamente."
 
           # Create or update service
           ACTIVE=$(aws ecs describe-services --cluster contaflow --services contaflow-backend \
