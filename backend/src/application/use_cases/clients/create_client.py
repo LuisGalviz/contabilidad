@@ -7,12 +7,10 @@ import structlog
 
 from src.application.dtos.client import ClientResponse, CreateClientRequest
 from src.domain.entities.client import Client
-from src.domain.entities.client_account_setting import build_default_account_settings
 from src.domain.repositories.client_account_setting_repository import ClientAccountSettingRepository
 from src.domain.repositories.client_repository import ClientRepository
 from src.domain.repositories.puc_account_repository import PUCAccountRepository
 from src.domain.repositories.tenant_repository import TenantRepository
-from src.infrastructure.purchases.puc.puc_seed import build_client_seed_accounts
 
 logger = structlog.get_logger()
 
@@ -61,15 +59,15 @@ class CreateClientUseCase:
         )
         saved = await self.client_repo.save(client)
 
-        # El plan de cuentas es por cliente, así que uno nuevo nace vacío y sin
-        # cuentas no se puede clasificar ninguna factura. Se siembra el
-        # subconjunto PUC de compras como punto de partida.
-        seeded = await self.puc_account_repo.save_many(build_client_seed_accounts(tenant_id, saved.id))
-        # La causación exige configuración explícita de qué cuenta cumple cada
-        # papel; sin esto un cliente nuevo no podría causar nada.
-        await self.account_setting_repo.save_many(build_default_account_settings(tenant_id, saved.id))
+        # El cliente nace **sin plan de cuentas**. Sembrar el subconjunto PUC del
+        # decreto parecía útil, pero los códigos reales de una empresa en Siigo
+        # son auxiliares de 8 dígitos (22050501, 24081001) y ninguno de los del
+        # decreto existe allá como cuenta de movimiento. Sembrarlos mostraba
+        # cuentas que parecían usables y que Siigo habría rechazado, y dejaba
+        # huérfanas las clasificaciones hechas contra ellas al importar el plan
+        # real. El plan se carga desde "Plan de cuentas" antes de clasificar.
 
-        logger.info("client_created", client_id=str(saved.id), tenant_id=str(tenant_id), puc_accounts_seeded=seeded)
+        logger.info("client_created", client_id=str(saved.id), tenant_id=str(tenant_id))
 
         return ClientResponse(
             id=str(saved.id),

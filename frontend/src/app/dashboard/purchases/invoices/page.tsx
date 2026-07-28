@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import { clientApi, purchaseApi, pucApi } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import type { SupplierInvoice } from '@/types'
-import { ArrowLeft, Check, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Check, X } from 'lucide-react'
 
 function cop(v: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v)
@@ -151,6 +151,22 @@ export default function InvoiceReviewPage() {
           </div>
         </div>
       </div>
+
+      {clientId && accounts && accountOptions.length === 0 && (
+        <div className="mb-4 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">{t('noChart.title')}</p>
+            <p className="mt-1">{t('noChart.help')}</p>
+            <button
+              onClick={() => router.push('/dashboard/settings/chart-of-accounts')}
+              className="mt-2 font-medium underline underline-offset-2"
+            >
+              {t('noChart.action')}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 flex gap-4 flex-wrap items-end">
         <div>

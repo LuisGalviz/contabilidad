@@ -449,7 +449,12 @@
     "change": "Change",
     "cancel": "Cancel",
     "rejectTitle": "Reject invoice",
-    "rejectPlaceholder": "Type the rejection reason…"
+    "rejectPlaceholder": "Type the rejection reason…",
+    "noChart": {
+      "title": "This company has no chart of accounts yet",
+      "help": "Without accounts no invoice can be classified. Import the company chart of accounts from Siigo to get started.",
+      "action": "Go to Chart of accounts"
+    }
   },
   "settings": {
     "badge": "Settings",

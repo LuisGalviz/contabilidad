@@ -449,7 +449,12 @@
     "change": "Cambiar",
     "cancel": "Cancelar",
     "rejectTitle": "Rechazar factura",
-    "rejectPlaceholder": "Escribe el motivo del rechazo…"
+    "rejectPlaceholder": "Escribe el motivo del rechazo…",
+    "noChart": {
+      "title": "Esta empresa todavía no tiene plan de cuentas",
+      "help": "Sin cuentas no se puede clasificar ninguna factura. Importa el plan de cuentas de la empresa desde Siigo para empezar.",
+      "action": "Ir a Plan de cuentas"
+    }
   },
   "settings": {
     "badge": "Configuración",

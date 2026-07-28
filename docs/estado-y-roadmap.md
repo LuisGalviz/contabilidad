@@ -25,7 +25,7 @@ Excel de la DIAN (documentos recibidos)
 | Lectura del Excel de la DIAN | Alias por columna, tolerante a renombres. CUFE como llave de deduplicación |
 | Notas crédito | Se detectan al leer e **invierten el asiento completo** |
 | Clasificación asistida que aprende | Reglas por proveedor + palabras clave. Tras 3 confirmaciones humanas y confianza ≥0,85 auto-causa. Al confirmar, propaga a las demás pendientes del mismo proveedor |
-| Plan de cuentas **por empresa** | `puc_accounts` con único `(client_id, code)`. Un cliente nuevo nace sembrado |
+| Plan de cuentas **por empresa** | `puc_accounts` con único `(client_id, code)`. Un cliente nuevo nace **vacío**: el plan se importa desde Siigo |
 | Importar plan real desde Siigo | Excel de Siigo. Omite cuentas de agrupación, nunca borra, avisa referencias rotas |
 | Causación sin códigos quemados | Cada empresa define qué cuenta cumple cada rol (`client_account_settings`) |
 | Validaciones | No se puede clasificar contra una cuenta ajena al plan del cliente, ni causar contra una cuenta muerta |
@@ -73,6 +73,12 @@ Por orden sugerido:
 - **Nada de códigos contables quemados.** La causación nombra el *rol* (proveedores, IVA
   descontable) y el código sale de la configuración del cliente. Se eligió tabla de roles
   en vez de columnas fijas para que agregar retenciones no requiera otra migración.
+- **Un cliente nuevo nace sin plan de cuentas.** Se sembraba el subconjunto PUC del
+  decreto (`2205`, `240801`, `5135`…), pero ninguno de esos códigos existe en el plan real
+  de Siigo como cuenta de movimiento: allá son agrupaciones y el comprobante se rechaza.
+  El seed mostraba cuentas que parecían usables y no lo eran, y dejaba huérfanas las
+  clasificaciones hechas contra ellas al importar el plan real. La única fuente del plan es
+  la importación desde Siigo.
 - **Fallar antes que adivinar.** Si falta configuración o la cuenta no existe, la causación
   se niega a correr. Un asiento contra la cuenta equivocada es peor que no causar.
 - **Al reimportar el plan nunca se borra.** Las cuentas que desaparecen quedan inactivas:

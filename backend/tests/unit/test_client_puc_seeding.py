@@ -7,10 +7,9 @@ import pytest
 from src.application.dtos.client import CreateClientRequest
 from src.application.use_cases.clients.create_client import CreateClientUseCase
 from src.domain.entities.client import Client
-from src.domain.entities.client_account_setting import AccountRole, ClientAccountSetting
+from src.domain.entities.client_account_setting import ClientAccountSetting
 from src.domain.entities.puc_account import PUCAccount
 from src.domain.entities.tenant import Tenant
-from src.infrastructure.purchases.puc.puc_seed import PUC_SEED_ACCOUNTS, build_client_seed_accounts
 
 
 class FakeClientRepo:
@@ -54,38 +53,21 @@ class FakeAccountSettingRepo:
         return len(settings)
 
 
-class TestBuildClientSeedAccounts:
-    def test_every_account_is_scoped_to_the_client(self):
-        tenant_id, client_id = uuid4(), uuid4()
+class TestNewClientStartsWithoutAChartOfAccounts:
+    """Sembrar el subconjunto PUC del decreto parecia util, pero los codigos
+    reales de una empresa en Siigo son auxiliares de 8 digitos y ninguno de los
+    del decreto existe alla como cuenta de movimiento: mostraba cuentas que
+    Siigo habria rechazado. El plan se importa desde Siigo."""
 
-        accounts = build_client_seed_accounts(tenant_id, client_id)
-
-        assert len(accounts) == len(PUC_SEED_ACCOUNTS)
-        assert all(a.tenant_id == tenant_id and a.client_id == client_id for a in accounts)
-
-    def test_two_clients_get_independent_accounts(self):
-        tenant_id = uuid4()
-        first, second = uuid4(), uuid4()
-
-        a = build_client_seed_accounts(tenant_id, first)
-        b = build_client_seed_accounts(tenant_id, second)
-
-        # Mismos códigos, filas distintas: es lo que permite que cada empresa
-        # edite su plan sin tocar el de las demás.
-        assert {x.code for x in a} == {x.code for x in b}
-        assert {x.id for x in a}.isdisjoint({x.id for x in b})
-
-
-class TestCreateClientSeedsPUC:
     @pytest.mark.asyncio
-    async def test_new_client_gets_its_own_chart_of_accounts(self):
+    async def test_no_accounts_are_created(self):
         tenant_id = uuid4()
-        tenant = Tenant(id=tenant_id, name="Firma", slug="firma", owner_email="a@x.co")
-        client_repo, puc_repo = FakeClientRepo(), FakePUCRepo()
-        setting_repo = FakeAccountSettingRepo()
+        puc_repo, setting_repo = FakePUCRepo(), FakeAccountSettingRepo()
         use_case = CreateClientUseCase(
-            client_repo=client_repo,  # type: ignore[arg-type]
-            tenant_repo=FakeTenantRepo(tenant),  # type: ignore[arg-type]
+            client_repo=FakeClientRepo(),  # type: ignore[arg-type]
+            tenant_repo=FakeTenantRepo(  # type: ignore[arg-type]
+                Tenant(id=tenant_id, name="Firma", slug="firma", owner_email="a@x.co")
+            ),
             puc_account_repo=puc_repo,  # type: ignore[arg-type]
             account_setting_repo=setting_repo,  # type: ignore[arg-type]
         )
@@ -95,30 +77,6 @@ class TestCreateClientSeedsPUC:
             CreateClientRequest(name="Rest Uno", nit="900111", contact_email="a@x.co", contact_name="A"),
         )
 
-        # Sin cuentas no se puede clasificar ninguna factura, así que un cliente
-        # recién creado no puede quedar con el plan vacío.
-        assert len(puc_repo.saved) == len(PUC_SEED_ACCOUNTS)
-        assert {a.client_id for a in puc_repo.saved} == {UUID(result.id)}
-        assert {a.tenant_id for a in puc_repo.saved} == {tenant_id}
-
-    @pytest.mark.asyncio
-    async def test_new_client_gets_its_causation_roles_configured(self):
-        tenant_id = uuid4()
-        tenant = Tenant(id=tenant_id, name="Firma", slug="firma", owner_email="a@x.co")
-        setting_repo = FakeAccountSettingRepo()
-        use_case = CreateClientUseCase(
-            client_repo=FakeClientRepo(),  # type: ignore[arg-type]
-            tenant_repo=FakeTenantRepo(tenant),  # type: ignore[arg-type]
-            puc_account_repo=FakePUCRepo(),  # type: ignore[arg-type]
-            account_setting_repo=setting_repo,  # type: ignore[arg-type]
-        )
-
-        await use_case.execute(
-            tenant_id,
-            CreateClientRequest(name="Rest Uno", nit="900111", contact_email="a@x.co", contact_name="A"),
-        )
-
-        # La causación exige configuración explícita: sin estos roles un cliente
-        # nuevo no podría causar ni una factura.
-        by_role = {s.role: s.account_code for s in setting_repo.saved}
-        assert by_role == {AccountRole.ACCOUNTS_PAYABLE: "2205", AccountRole.VAT_DEDUCTIBLE: "240801"}
+        assert UUID(result.id)
+        assert puc_repo.saved == []
+        assert setting_repo.saved == []
