@@ -166,3 +166,18 @@ class TestCausationUsesClientAccounts:
         # software contable, cuando ya es tarde.
         with pytest.raises(MissingAccountSettingError, match="2205"):
             await use_case.execute([invoice.id])
+
+    @pytest.mark.asyncio
+    async def test_fails_when_the_invoices_own_account_was_dropped_from_the_chart(self):
+        invoice = _invoice()
+        use_case = _use_case(
+            invoice,
+            {AccountRole.ACCOUNTS_PAYABLE: "22050501", AccountRole.VAT_DEDUCTIBLE: "24081001"},
+            missing={"5135"},
+        )
+
+        # La cuenta se eligio al clasificar; un plan importado despues pudo
+        # dejarla fuera. Causar igual generaria un asiento contra un codigo
+        # muerto que el software contable rechaza.
+        with pytest.raises(MissingAccountSettingError, match="5135"):
+            await use_case.execute([invoice.id])

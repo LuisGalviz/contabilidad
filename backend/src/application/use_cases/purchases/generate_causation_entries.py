@@ -46,6 +46,18 @@ class GenerateCausationEntriesUseCase:
                     f"Invoice {invoice_id} must be CLASSIFIED with a final account before causación"
                 )
 
+            # La cuenta se eligió al clasificar, pero entre medias pudo importarse
+            # un plan nuevo que la dejó fuera. Se revalida acá, que es el último
+            # punto antes de mandarla al software contable.
+            expense_account = await self.puc_account_repo.get_by_code(
+                invoice.tenant_id, invoice.client_id, invoice.final_account_code
+            )
+            if expense_account is None or not expense_account.is_active:
+                raise MissingAccountSettingError(
+                    f"La factura {invoice.cufe} está clasificada en la cuenta {invoice.final_account_code}, "
+                    "que ya no existe o está inactiva en el plan de cuentas del cliente. Reclasifícala."
+                )
+
             payable_account = await self._account_for(invoice.tenant_id, invoice.client_id, AccountRole.ACCOUNTS_PAYABLE)
 
             # A normal purchase debits the expense/IVA and credits proveedores.
