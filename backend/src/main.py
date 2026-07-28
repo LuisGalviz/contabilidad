@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
@@ -14,7 +15,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_client import Counter, Histogram, generate_latest
 
 from src.config import get_settings
-from src.infrastructure.database.connection import create_tables
+from src.infrastructure.database.connection import run_migrations
 from src.presentation.api.v1 import auth, clients, purchases, reports, tenants, users
 
 logger = structlog.get_logger()
@@ -26,7 +27,7 @@ REQUEST_DURATION = Histogram("http_request_duration_seconds", "HTTP request dura
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("starting_application", env=get_settings().app_env)
-    await create_tables()
+    await asyncio.to_thread(run_migrations)
     yield
     logger.info("shutting_down_application")
 

@@ -64,6 +64,9 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Windows/Docker bind mounts don't forward inotify events, so Next's dev
+      # watcher misses file changes. Polling forces reliable hot reload.
+      WATCHPACK_POLLING: "true"
     volumes:
       - ./frontend:/app
       - /app/node_modules

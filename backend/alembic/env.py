@@ -36,6 +36,12 @@ def run_migrations_offline() -> None:
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
+        # Transaction-scoped advisory lock: serializes concurrent migrations
+        # (e.g. several uvicorn workers running upgrade on startup) and releases
+        # automatically at commit/rollback. It must live *inside* the alembic
+        # transaction — a session-level lock via a separate exec opens its own
+        # implicit transaction that swallows the migration's commit.
+        connection.exec_driver_sql("SELECT pg_advisory_xact_lock(721839)")
         context.run_migrations()
 
 
