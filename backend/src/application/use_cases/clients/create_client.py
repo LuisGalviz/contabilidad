@@ -7,6 +7,8 @@ import structlog
 
 from src.application.dtos.client import ClientResponse, CreateClientRequest
 from src.domain.entities.client import Client
+from src.domain.entities.client_account_setting import build_default_account_settings
+from src.domain.repositories.client_account_setting_repository import ClientAccountSettingRepository
 from src.domain.repositories.client_repository import ClientRepository
 from src.domain.repositories.puc_account_repository import PUCAccountRepository
 from src.domain.repositories.tenant_repository import TenantRepository
@@ -32,6 +34,7 @@ class CreateClientUseCase:
     client_repo: ClientRepository
     tenant_repo: TenantRepository
     puc_account_repo: PUCAccountRepository
+    account_setting_repo: ClientAccountSettingRepository
 
     async def execute(self, tenant_id: UUID, request: CreateClientRequest) -> ClientResponse:
         tenant = await self.tenant_repo.get_by_id(tenant_id)
@@ -62,6 +65,9 @@ class CreateClientUseCase:
         # cuentas no se puede clasificar ninguna factura. Se siembra el
         # subconjunto PUC de compras como punto de partida.
         seeded = await self.puc_account_repo.save_many(build_client_seed_accounts(tenant_id, saved.id))
+        # La causación exige configuración explícita de qué cuenta cumple cada
+        # papel; sin esto un cliente nuevo no podría causar nada.
+        await self.account_setting_repo.save_many(build_default_account_settings(tenant_id, saved.id))
 
         logger.info("client_created", client_id=str(saved.id), tenant_id=str(tenant_id), puc_accounts_seeded=seeded)
 

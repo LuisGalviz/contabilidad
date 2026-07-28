@@ -17,11 +17,18 @@ from src.domain.repositories.classification_history_repository import (
     ClassificationHistoryRepository,
 )
 from src.domain.repositories.mapping_rule_repository import SupplierMappingRuleRepository
+from src.domain.repositories.puc_account_repository import PUCAccountRepository
 from src.domain.repositories.supplier_invoice_repository import SupplierInvoiceRepository
 
 
 class InvoiceNotFoundError(Exception):
     pass
+
+
+class AccountNotInClientChartError(Exception):
+    """La cuenta elegida no existe (o está inactiva) en el plan de cuentas de
+    ese cliente. Dejarla pasar significa causar contra una cuenta inexistente,
+    que el software contable rechaza cuando ya es tarde."""
 
 
 @dataclass
@@ -39,6 +46,7 @@ class ConfirmInvoiceClassificationUseCase:
     mapping_rule_repo: SupplierMappingRuleRepository
     history_repo: ClassificationHistoryRepository
     suggest_mapping: SuggestMappingUseCase
+    puc_account_repo: PUCAccountRepository
 
     async def execute(
         self,
@@ -50,6 +58,14 @@ class ConfirmInvoiceClassificationUseCase:
         invoice = await self.invoice_repo.get_by_id(invoice_id)
         if invoice is None:
             raise InvoiceNotFoundError(f"Invoice {invoice_id} not found")
+
+        # El plan de cuentas es de la empresa: un código válido para un cliente
+        # puede no existir en otro. Se valida acá, que es donde el humano elige.
+        account = await self.puc_account_repo.get_by_code(invoice.tenant_id, invoice.client_id, account_code)
+        if account is None or not account.is_active:
+            raise AccountNotInClientChartError(
+                f"La cuenta {account_code} no existe o está inactiva en el plan de cuentas de este cliente."
+            )
 
         keywords = extract_keywords(invoice.concept_description)
         # The rule as it stands *before* this human action — what the system

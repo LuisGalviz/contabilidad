@@ -16,6 +16,7 @@ from src.application.use_cases.clients.update_client import (
     UpdateClientUseCase,
 )
 from src.infrastructure.database.connection import get_session
+from src.infrastructure.repositories.client_account_setting_repository import SQLClientAccountSettingRepository
 from src.infrastructure.repositories.client_repository import SQLClientRepository
 from src.infrastructure.repositories.puc_account_repository import SQLPUCAccountRepository
 from src.infrastructure.repositories.tenant_repository import SQLTenantRepository
@@ -37,6 +38,7 @@ async def create_client(
         client_repo=SQLClientRepository(session),
         tenant_repo=SQLTenantRepository(session),
         puc_account_repo=SQLPUCAccountRepository(session),
+        account_setting_repo=SQLClientAccountSettingRepository(session),
     )
     try:
         result = await use_case.execute(current.tenant_id, body)

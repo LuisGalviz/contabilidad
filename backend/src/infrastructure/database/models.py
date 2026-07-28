@@ -118,6 +118,19 @@ class PUCAccountModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
+class ClientAccountSettingModel(Base):
+    """Qué cuenta usa cada cliente para cada papel de la causación."""
+
+    __tablename__ = "client_account_settings"
+    __table_args__ = (UniqueConstraint("client_id", "role", name="uq_client_account_settings_client_role"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    account_code: Mapped[str] = mapped_column(String(10), nullable=False)
+
+
 class CostCenterModel(Base):
     __tablename__ = "cost_centers"
 

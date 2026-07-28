@@ -44,3 +44,19 @@ class PUCAccountResponse(BaseModel):
 
 class PUCAccountListResponse(BaseModel):
     items: list[PUCAccountResponse]
+
+
+class AccountSettingResponse(BaseModel):
+    role: str
+    account_code: str
+    account_name: str | None = None
+
+
+class AccountSettingListResponse(BaseModel):
+    items: list[AccountSettingResponse]
+
+
+class UpdateAccountSettingsRequest(BaseModel):
+    """Mapa rol -> código de cuenta, p. ej. {"accounts_payable": "2205"}."""
+
+    settings: dict[str, str]

@@ -7,12 +7,15 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.dtos.mapping_rule import (
+    AccountSettingListResponse,
+    AccountSettingResponse,
     ClassificationHistoryListResponse,
     ClassificationHistoryResponse,
     MappingRuleListResponse,
     MappingRuleResponse,
     PUCAccountListResponse,
     PUCAccountResponse,
+    UpdateAccountSettingsRequest,
 )
 from src.application.dtos.purchase_invoice import (
     BulkClassifyRequest,
@@ -29,7 +32,10 @@ from src.application.dtos.purchase_invoice import (
     SupplierInvoiceResponse,
 )
 from src.application.dtos.report import CreateReportRequest
-from src.application.use_cases.purchases.confirm_classification import ConfirmInvoiceClassificationUseCase
+from src.application.use_cases.purchases.confirm_classification import (
+    AccountNotInClientChartError,
+    ConfirmInvoiceClassificationUseCase,
+)
 from src.application.use_cases.purchases.create_import_batch import (
     ClientNotFoundError,
     ClientNotInTenantError,
@@ -38,12 +44,14 @@ from src.application.use_cases.purchases.create_import_batch import (
 from src.application.use_cases.purchases.generate_causation_entries import (
     GenerateCausationEntriesUseCase,
     InvoiceNotClassifiedError,
+    MissingAccountSettingError,
 )
 from src.application.use_cases.purchases.process_import_batch import ProcessImportBatchUseCase
 from src.application.use_cases.purchases.suggest_mapping import SuggestMappingUseCase
 from src.application.use_cases.reports.create_report import CreateReportUseCase
 from src.application.use_cases.reports.generate_report import GenerateReportUseCase
 from src.domain.entities.causation_entry import CausationEntry
+from src.domain.entities.client_account_setting import AccountRole, ClientAccountSetting
 from src.domain.entities.classification_history import ClassificationHistoryEntry
 from src.domain.entities.invoice_import_batch import InvoiceImportBatch
 from src.domain.entities.mapping_rule import SupplierMappingRule
@@ -52,6 +60,7 @@ from src.domain.entities.supplier_invoice import InvoiceStatus, SupplierInvoice
 from src.infrastructure.accounting.factory import build_accounting_system
 from src.infrastructure.database.connection import get_session
 from src.infrastructure.repositories.causation_entry_repository import SQLCausationEntryRepository
+from src.infrastructure.repositories.client_account_setting_repository import SQLClientAccountSettingRepository
 from src.infrastructure.repositories.classification_history_repository import SQLClassificationHistoryRepository
 from src.infrastructure.repositories.client_repository import SQLClientRepository
 from src.infrastructure.repositories.import_batch_repository import SQLInvoiceImportBatchRepository
@@ -217,13 +226,17 @@ async def classify_invoice(
         mapping_rule_repo=mapping_rule_repo,
         history_repo=SQLClassificationHistoryRepository(session),
         suggest_mapping=SuggestMappingUseCase(mapping_rule_repo),
+        puc_account_repo=SQLPUCAccountRepository(session),
     )
-    invoice, _rule = await use_case.execute(
-        UUID(invoice_id),
-        body.account_code,
-        UUID(body.cost_center_id) if body.cost_center_id else None,
-        current.user_id,
-    )
+    try:
+        invoice, _rule = await use_case.execute(
+            UUID(invoice_id),
+            body.account_code,
+            UUID(body.cost_center_id) if body.cost_center_id else None,
+            current.user_id,
+        )
+    except AccountNotInClientChartError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     await session.commit()
     return _invoice_to_response(invoice)
 
@@ -244,6 +257,7 @@ async def bulk_classify_invoices(
         mapping_rule_repo=mapping_rule_repo,
         history_repo=SQLClassificationHistoryRepository(session),
         suggest_mapping=SuggestMappingUseCase(mapping_rule_repo),
+        puc_account_repo=SQLPUCAccountRepository(session),
     )
     cost_center_id = UUID(body.cost_center_id) if body.cost_center_id else None
 
@@ -253,7 +267,12 @@ async def bulk_classify_invoices(
         existing = await invoice_repo.get_by_id(invoice_id)
         if not existing or existing.tenant_id != current.tenant_id:
             continue
-        invoice, _rule = await use_case.execute(invoice_id, body.account_code, cost_center_id, current.user_id)
+        try:
+            invoice, _rule = await use_case.execute(invoice_id, body.account_code, cost_center_id, current.user_id)
+        except AccountNotInClientChartError as exc:
+            # Una sola cuenta inválida invalida la operación entera: en masiva
+            # todas las facturas van a la misma cuenta.
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
         results.append(invoice)
 
     await session.commit()
@@ -375,11 +394,20 @@ async def _run_causation_generation(
             return
 
         accounting_system = build_accounting_system(causation_repo)
-        causation_use_case = GenerateCausationEntriesUseCase(invoice_repo=invoice_repo, accounting_system=accounting_system)
+        causation_use_case = GenerateCausationEntriesUseCase(
+            invoice_repo=invoice_repo,
+            accounting_system=accounting_system,
+            account_setting_repo=SQLClientAccountSettingRepository(session),
+        )
         try:
             await causation_use_case.execute(target_ids)
-        except InvoiceNotClassifiedError as exc:
+        except (InvoiceNotClassifiedError, MissingAccountSettingError) as exc:
             logger.warning("causation_generation_partial_failure", client_id=str(client_id), error=str(exc))
+        except Exception as exc:
+            # Corre en background: si esto escapa, la tarea muere en silencio,
+            # no se generan los informes y el usuario no ve ningún error.
+            logger.exception("causation_generation_failed", client_id=str(client_id), period=period, error=str(exc))
+            return
         await session.commit()
 
         report_repo = SQLReportRepository(session)
@@ -541,6 +569,71 @@ def _rule_to_response(rule: SupplierMappingRule) -> MappingRuleResponse:
         times_corrected=rule.times_corrected,
         is_active=rule.is_active,
     )
+
+
+@puc_router.get("/account-settings", response_model=AccountSettingListResponse)
+async def get_account_settings(
+    client_id: str,
+    current: CurrentUser = Depends(require_contador),
+    session: AsyncSession = Depends(get_session),
+) -> AccountSettingListResponse:
+    """Qué cuenta usa este cliente para cada papel de la causación."""
+    if not current.tenant_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
+
+    setting_repo = SQLClientAccountSettingRepository(session)
+    puc_repo = SQLPUCAccountRepository(session)
+    settings = await setting_repo.list_by_client(current.tenant_id, UUID(client_id))
+
+    items = []
+    for setting in settings:
+        account = await puc_repo.get_by_code(current.tenant_id, UUID(client_id), setting.account_code)
+        items.append(
+            AccountSettingResponse(
+                role=setting.role.value,
+                account_code=setting.account_code,
+                account_name=account.name if account else None,
+            )
+        )
+    return AccountSettingListResponse(items=items)
+
+
+@puc_router.put("/account-settings", response_model=AccountSettingListResponse)
+async def update_account_settings(
+    client_id: str,
+    body: UpdateAccountSettingsRequest,
+    current: CurrentUser = Depends(require_contador),
+    session: AsyncSession = Depends(get_session),
+) -> AccountSettingListResponse:
+    if not current.tenant_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
+
+    tenant_id, client_uuid = current.tenant_id, UUID(client_id)
+    puc_repo = SQLPUCAccountRepository(session)
+
+    to_save = []
+    for raw_role, code in body.settings.items():
+        try:
+            role = AccountRole(raw_role)
+        except ValueError as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Rol contable desconocido: {raw_role}"
+            ) from exc
+        # Apuntar un rol a una cuenta inexistente rompe la causación entera más
+        # tarde, así que se rechaza aquí.
+        account = await puc_repo.get_by_code(tenant_id, client_uuid, code)
+        if account is None or not account.is_active:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"La cuenta {code} no existe o está inactiva en el plan de cuentas de este cliente.",
+            )
+        to_save.append(
+            ClientAccountSetting(tenant_id=tenant_id, client_id=client_uuid, role=role, account_code=code)
+        )
+
+    await SQLClientAccountSettingRepository(session).save_many(to_save)
+    await session.commit()
+    return await get_account_settings(client_id, current, session)
 
 
 def _history_to_response(entry: ClassificationHistoryEntry) -> ClassificationHistoryResponse:
