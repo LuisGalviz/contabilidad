@@ -105,8 +105,12 @@ class ReportFileModel(Base):
 
 class PUCAccountModel(Base):
     __tablename__ = "puc_accounts"
+    __table_args__ = (UniqueConstraint("client_id", "code", name="uq_puc_accounts_client_code"),)
 
-    code: Mapped[str] = mapped_column(String(10), primary_key=True)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False, index=True)
+    code: Mapped[str] = mapped_column(String(10), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     account_class: Mapped[str] = mapped_column(String(20), nullable=False)
     parent_code: Mapped[str | None] = mapped_column(String(10), nullable=True)

@@ -8,7 +8,9 @@ import structlog
 from src.application.dtos.client import ClientResponse, CreateClientRequest
 from src.domain.entities.client import Client
 from src.domain.repositories.client_repository import ClientRepository
+from src.domain.repositories.puc_account_repository import PUCAccountRepository
 from src.domain.repositories.tenant_repository import TenantRepository
+from src.infrastructure.purchases.puc.puc_seed import build_client_seed_accounts
 
 logger = structlog.get_logger()
 
@@ -29,6 +31,7 @@ class TenantNotFoundError(Exception):
 class CreateClientUseCase:
     client_repo: ClientRepository
     tenant_repo: TenantRepository
+    puc_account_repo: PUCAccountRepository
 
     async def execute(self, tenant_id: UUID, request: CreateClientRequest) -> ClientResponse:
         tenant = await self.tenant_repo.get_by_id(tenant_id)
@@ -55,7 +58,12 @@ class CreateClientUseCase:
         )
         saved = await self.client_repo.save(client)
 
-        logger.info("client_created", client_id=str(saved.id), tenant_id=str(tenant_id))
+        # El plan de cuentas es por cliente, así que uno nuevo nace vacío y sin
+        # cuentas no se puede clasificar ninguna factura. Se siembra el
+        # subconjunto PUC de compras como punto de partida.
+        seeded = await self.puc_account_repo.save_many(build_client_seed_accounts(tenant_id, saved.id))
+
+        logger.info("client_created", client_id=str(saved.id), tenant_id=str(tenant_id), puc_accounts_seeded=seeded)
 
         return ClientResponse(
             id=str(saved.id),

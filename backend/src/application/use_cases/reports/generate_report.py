@@ -117,7 +117,7 @@ class GenerateReportUseCase:
         period = report.period or datetime.now(timezone.utc).strftime("%Y-%m")
         invoices = await self.invoice_repo.list_by_client_and_period(report.tenant_id, report.client_id, period)
         causation_entries = await self.causation_repo.list_by_client_and_period(report.tenant_id, report.client_id, period)
-        accounts = await self.puc_account_repo.list_active()
+        accounts = await self.puc_account_repo.list_active(report.tenant_id, report.client_id)
         accounts_by_code = {a.code: a for a in accounts}
 
         return await asyncio.get_event_loop().run_in_executor(

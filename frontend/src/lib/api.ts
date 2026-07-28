@@ -143,7 +143,8 @@ export const mappingRuleApi = {
 }
 
 export const pucApi = {
-  listAccounts: (params?: { account_class?: string; search?: string }) =>
+  // El plan de cuentas es por cliente, así que client_id es obligatorio.
+  listAccounts: (params: { client_id: string; account_class?: string; search?: string }) =>
     api.get<{ items: PUCAccount[] }>('/puc/accounts', { params }).then((r) => r.data),
 }
 

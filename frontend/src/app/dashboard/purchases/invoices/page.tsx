@@ -67,7 +67,11 @@ export default function InvoiceReviewPage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
-  const { data: accounts } = useQuery({ queryKey: ['puc-accounts'], queryFn: () => pucApi.listAccounts() })
+  const { data: accounts } = useQuery({
+    queryKey: ['puc-accounts', clientId],
+    queryFn: () => pucApi.listAccounts({ client_id: clientId }),
+    enabled: Boolean(clientId),
+  })
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['purchase-invoices', clientId, statusFilter, batchId],

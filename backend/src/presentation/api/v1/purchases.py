@@ -441,13 +441,17 @@ async def get_mapping_rule_history(
 
 @puc_router.get("/accounts", response_model=PUCAccountListResponse)
 async def list_puc_accounts(
+    client_id: str,
     account_class: str | None = None,
     search: str | None = None,
     current: CurrentUser = Depends(require_contador),
     session: AsyncSession = Depends(get_session),
 ) -> PUCAccountListResponse:
+    if not current.tenant_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
+
     repo = SQLPUCAccountRepository(session)
-    accounts = await repo.list_active(account_class=account_class, search=search)
+    accounts = await repo.list_active(current.tenant_id, UUID(client_id), account_class=account_class, search=search)
     return PUCAccountListResponse(
         items=[
             PUCAccountResponse(
