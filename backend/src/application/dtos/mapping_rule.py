@@ -60,3 +60,12 @@ class UpdateAccountSettingsRequest(BaseModel):
     """Mapa rol -> código de cuenta, p. ej. {"accounts_payable": "2205"}."""
 
     settings: dict[str, str]
+
+
+class ChartImportResponse(BaseModel):
+    created: int
+    updated: int
+    deactivated: int
+    total_active: int
+    messages: list[str]
+    warnings: list[str]

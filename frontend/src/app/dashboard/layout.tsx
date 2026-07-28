@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import { isAuthenticated, clearTokens } from '@/lib/auth'
 import { setLocale } from '@/lib/locale'
-import { LayoutDashboard, Users, ShoppingCart, FileText, Settings, LogOut, Globe } from 'lucide-react'
+import { LayoutDashboard, Users, ShoppingCart, FileText, Settings, LogOut, Globe, BookOpen } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations('nav')
@@ -21,6 +21,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/clients', label: t('clients'), icon: Users },
     { href: '/dashboard/purchases', label: t('purchases'), icon: ShoppingCart },
     { href: '/dashboard/reports', label: t('reports'), icon: FileText },
+    { href: '/dashboard/settings/chart-of-accounts', label: t('chartOfAccounts'), icon: BookOpen },
     { href: '/dashboard/settings', label: t('settings'), icon: Settings },
   ]
 

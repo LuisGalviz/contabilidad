@@ -26,7 +26,8 @@
     "settings": "Configuración",
     "logout": "Cerrar sesión",
     "brand": "ContaFlow",
-    "brandSub": "Gestión financiera"
+    "brandSub": "Gestión financiera",
+    "chartOfAccounts": "Plan de cuentas"
   },
   "landing": {
     "login": "Iniciar sesión",
@@ -36,9 +37,18 @@
     "subtitle": "Sube un balance de prueba o archivo de ventas y obtén estados financieros, informes gerenciales y análisis listos para compartir con tu cliente.",
     "cta": "Crear cuenta gratuita",
     "modules": {
-      "sazon": { "title": "Restaurante Sazón", "desc": "Informe gerencial de ventas, gastos, propinas y resultado operativo." },
-      "tlg": { "title": "Estados Financieros", "desc": "Carga tu balance de prueba y genera ESF, ER y resumen gerencial." },
-      "mensualizados": { "title": "Informes mensualizados", "desc": "Actualización acumulativa de Balance y PYG periodo a periodo." }
+      "sazon": {
+        "title": "Restaurante Sazón",
+        "desc": "Informe gerencial de ventas, gastos, propinas y resultado operativo."
+      },
+      "tlg": {
+        "title": "Estados Financieros",
+        "desc": "Carga tu balance de prueba y genera ESF, ER y resumen gerencial."
+      },
+      "mensualizados": {
+        "title": "Informes mensualizados",
+        "desc": "Actualización acumulativa de Balance y PYG periodo a periodo."
+      }
     }
   },
   "auth": {
@@ -471,6 +481,30 @@
       "title": "Idioma",
       "es": "Español",
       "en": "English"
+    }
+  },
+  "chartOfAccounts": {
+    "badge": "Configuración",
+    "title": "Plan de cuentas",
+    "subtitle": "Importa el plan de cuentas de cada empresa desde Siigo y define qué cuenta usa la causación.",
+    "client": "Empresa",
+    "selectClient": "Selecciona una empresa",
+    "import": {
+      "title": "Importar desde Siigo",
+      "help": "En Siigo Nube: Reportes → Contables → Contables → Listado de cuentas contables → Descargar Excel. Las cuentas que ya no aparezcan en el archivo se marcan inactivas, nunca se borran.",
+      "button": "Cargar Excel",
+      "uploading": "Importando...",
+      "currentCount": "{count} cuentas activas actualmente.",
+      "summary": "{created} cuentas nuevas, {updated} actualizadas, {deactivated} desactivadas."
+    },
+    "roles": {
+      "title": "Cuentas de la causación",
+      "help": "Qué cuenta de esta empresa se usa para cada parte del asiento.",
+      "accounts_payable": "Proveedores (cuenta por pagar)",
+      "vat_deductible": "IVA descontable",
+      "selectAccount": "Selecciona una cuenta",
+      "save": "Guardar",
+      "saving": "Guardando..."
     }
   }
 }

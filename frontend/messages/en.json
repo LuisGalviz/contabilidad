@@ -26,7 +26,8 @@
     "settings": "Settings",
     "logout": "Log out",
     "brand": "ContaFlow",
-    "brandSub": "Financial management"
+    "brandSub": "Financial management",
+    "chartOfAccounts": "Chart of accounts"
   },
   "landing": {
     "login": "Log in",
@@ -36,9 +37,18 @@
     "subtitle": "Upload a trial balance or sales file and get financial statements, management reports and analyses ready to share with your client.",
     "cta": "Create free account",
     "modules": {
-      "sazon": { "title": "Restaurant Sazón", "desc": "Management report of sales, expenses, tips and operating result." },
-      "tlg": { "title": "Financial Statements", "desc": "Upload your trial balance and generate BSF, IS and management summary." },
-      "mensualizados": { "title": "Monthly reports", "desc": "Cumulative update of Balance Sheet and P&L period by period." }
+      "sazon": {
+        "title": "Restaurant Sazón",
+        "desc": "Management report of sales, expenses, tips and operating result."
+      },
+      "tlg": {
+        "title": "Financial Statements",
+        "desc": "Upload your trial balance and generate BSF, IS and management summary."
+      },
+      "mensualizados": {
+        "title": "Monthly reports",
+        "desc": "Cumulative update of Balance Sheet and P&L period by period."
+      }
     }
   },
   "auth": {
@@ -471,6 +481,30 @@
       "title": "Language",
       "es": "Español",
       "en": "English"
+    }
+  },
+  "chartOfAccounts": {
+    "badge": "Settings",
+    "title": "Chart of accounts",
+    "subtitle": "Import each company's chart of accounts from Siigo and set which account causación uses.",
+    "client": "Company",
+    "selectClient": "Select a company",
+    "import": {
+      "title": "Import from Siigo",
+      "help": "In Siigo Nube: Reports → Accounting → Accounting → Chart of accounts list → Download Excel. Accounts missing from the file are marked inactive, never deleted.",
+      "button": "Upload Excel",
+      "uploading": "Importing...",
+      "currentCount": "{count} active accounts right now.",
+      "summary": "{created} new accounts, {updated} updated, {deactivated} deactivated."
+    },
+    "roles": {
+      "title": "Causación accounts",
+      "help": "Which account of this company is used for each part of the entry.",
+      "accounts_payable": "Accounts payable (suppliers)",
+      "vat_deductible": "Deductible VAT",
+      "selectAccount": "Select an account",
+      "save": "Save",
+      "saving": "Saving..."
     }
   }
 }

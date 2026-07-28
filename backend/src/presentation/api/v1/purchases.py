@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from io import BytesIO
+
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.application.dtos.mapping_rule import (
     AccountSettingListResponse,
     AccountSettingResponse,
+    ChartImportResponse,
     ClassificationHistoryListResponse,
     ClassificationHistoryResponse,
     MappingRuleListResponse,
@@ -46,6 +49,7 @@ from src.application.use_cases.purchases.generate_causation_entries import (
     InvoiceNotClassifiedError,
     MissingAccountSettingError,
 )
+from src.application.use_cases.purchases.import_chart_of_accounts import ImportChartOfAccountsUseCase
 from src.application.use_cases.purchases.process_import_batch import ProcessImportBatchUseCase
 from src.application.use_cases.purchases.suggest_mapping import SuggestMappingUseCase
 from src.application.use_cases.reports.create_report import CreateReportUseCase
@@ -59,6 +63,7 @@ from src.domain.entities.report import ReportType
 from src.domain.entities.supplier_invoice import InvoiceStatus, SupplierInvoice
 from src.infrastructure.accounting.factory import build_accounting_system
 from src.infrastructure.database.connection import get_session
+from src.infrastructure.purchases.puc.siigo_chart_importer import load_siigo_chart_of_accounts
 from src.infrastructure.repositories.causation_entry_repository import SQLCausationEntryRepository
 from src.infrastructure.repositories.client_account_setting_repository import SQLClientAccountSettingRepository
 from src.infrastructure.repositories.classification_history_repository import SQLClassificationHistoryRepository
@@ -568,6 +573,52 @@ def _rule_to_response(rule: SupplierMappingRule) -> MappingRuleResponse:
         times_confirmed=rule.times_confirmed,
         times_corrected=rule.times_corrected,
         is_active=rule.is_active,
+    )
+
+
+@puc_router.post("/accounts/import", response_model=ChartImportResponse)
+async def import_chart_of_accounts(
+    client_id: str,
+    file: UploadFile = File(...),
+    current: CurrentUser = Depends(require_contador),
+    session: AsyncSession = Depends(get_session),
+) -> ChartImportResponse:
+    """Carga el plan de cuentas de un cliente desde el Excel de Siigo
+    (Reportes → Contables → Listado de cuentas contables → Descargar Excel).
+
+    Siigo no expone el catálogo de cuentas por API, así que esta es la vía.
+    """
+    if not current.tenant_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
+
+    tenant_id, client_uuid = current.tenant_id, UUID(client_id)
+    client_repo = SQLClientRepository(session)
+    client = await client_repo.get_by_id(client_uuid)
+    if not client or client.tenant_id != tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Client not found")
+
+    try:
+        accounts, messages = load_siigo_chart_of_accounts(BytesIO(await file.read()))
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    puc_repo = SQLPUCAccountRepository(session)
+    use_case = ImportChartOfAccountsUseCase(
+        puc_account_repo=puc_repo,
+        mapping_rule_repo=SQLSupplierMappingRuleRepository(session),
+        account_setting_repo=SQLClientAccountSettingRepository(session),
+    )
+    result = await use_case.execute(tenant_id, client_uuid, accounts, messages)
+    await session.commit()
+
+    total_active = len(await puc_repo.list_active(tenant_id, client_uuid))
+    return ChartImportResponse(
+        created=result.created,
+        updated=result.updated,
+        deactivated=result.deactivated,
+        total_active=total_active,
+        messages=result.messages,
+        warnings=result.warnings,
     )
 
 

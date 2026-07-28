@@ -161,5 +161,24 @@ export interface PUCAccount {
   requires_cost_center: boolean
 }
 
+/** Papeles que una cuenta puede cumplir en la causación de una compra. */
+export const ACCOUNT_ROLES = ['accounts_payable', 'vat_deductible'] as const
+export type AccountRole = (typeof ACCOUNT_ROLES)[number]
+
+export interface AccountSetting {
+  role: string
+  account_code: string
+  account_name: string | null
+}
+
+export interface ChartImportResult {
+  created: number
+  updated: number
+  deactivated: number
+  total_active: number
+  messages: string[]
+  warnings: string[]
+}
+
 export const SECTOR_KEYS = ['restaurante', 'generico'] as const
 export type SectorKey = (typeof SECTOR_KEYS)[number]

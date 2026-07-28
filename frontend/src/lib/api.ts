@@ -1,6 +1,8 @@
 import axios, { AxiosError } from 'axios'
 import type {
+  AccountSetting,
   CausationEntry,
+  ChartImportResult,
   Client,
   ClassificationHistoryEntry,
   ImportBatch,
@@ -146,6 +148,27 @@ export const pucApi = {
   // El plan de cuentas es por cliente, así que client_id es obligatorio.
   listAccounts: (params: { client_id: string; account_class?: string; search?: string }) =>
     api.get<{ items: PUCAccount[] }>('/puc/accounts', { params }).then((r) => r.data),
+
+  importChart: (data: { client_id: string; file: File }) => {
+    const form = new FormData()
+    form.append('file', data.file)
+    return api
+      .post<ChartImportResult>('/puc/accounts/import', form, {
+        params: { client_id: data.client_id },
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data)
+  },
+
+  getAccountSettings: (clientId: string) =>
+    api
+      .get<{ items: AccountSetting[] }>('/puc/account-settings', { params: { client_id: clientId } })
+      .then((r) => r.data),
+
+  updateAccountSettings: (clientId: string, settings: Record<string, string>) =>
+    api
+      .put<{ items: AccountSetting[] }>('/puc/account-settings', { settings }, { params: { client_id: clientId } })
+      .then((r) => r.data),
 }
 
 export async function downloadFile(reportId: string, fileId: string, fileName: string) {

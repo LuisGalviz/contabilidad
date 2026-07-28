@@ -45,14 +45,40 @@ Notas:
 - Siigo también entrega **credenciales de un ambiente de pruebas** si se solicitan a sus
   líneas de atención indicando el NIT registrado — útiles antes de salir a producción.
 
+## Plan de cuentas: importación manual (no hay API)
+
+Siigo **no expone el catálogo de cuentas contables por su API**. Revisado contra la
+documentación pública: existen `/v1/products`, `/customers`, `/invoices`, `/purchases`,
+`/credit-notes`, `/vouchers`, `/payment-receipts`, `/journals`, `/quotations` y
+`/purchase-support-documents`, pero ninguno de plan de cuentas. Cuidado con
+`/v1/account-groups`: son grupos de **inventario**, no el PUC.
+
+La vía es el Excel que el contador descarga desde
+`Reportes → Contables → Contables → Listado de cuentas contables → Descargar Excel`
+y carga en ContaFlow desde **Plan de cuentas** en el menú lateral.
+
+El plan es **por cliente**: cada empresa tiene el suyo, igual que en Siigo, donde el
+catálogo es por compañía. Al importar:
+
+- Las cuentas nuevas se crean y las existentes se actualizan (nombre, clase, estado).
+- Las que ya no aparecen en el archivo se marcan **inactivas, nunca se borran**: hay
+  reglas de clasificación aprendidas y facturas ya causadas apuntando a esos códigos.
+- Se avisa si alguna regla aprendida o algún rol de la causación quedó apuntando a una
+  cuenta que desapareció.
+
+Los alias de columna del lector están en
+`src/infrastructure/purchases/puc/siigo_chart_importer.py` (`SIIGO_ALIASES`); si Siigo
+cambia un encabezado, es una línea. Todavía **no se ha validado contra un archivo real**
+exportado de Siigo — los alias son una apuesta razonable hasta tener uno.
+
 ## Definiciones pendientes del equipo contable
 
 1. **Tipo de comprobante destino** (`SIIGO_JOURNAL_DOCUMENT_ID`): id del comprobante de
    contabilidad donde deben quedar las causaciones. Se consulta con
    `GET /v1/document-types?type=CC` una vez haya credenciales.
-2. Confirmar que el plan de cuentas usado en ContaFlow (PUC) coincide con los códigos
-   contables activos en Siigo — el comprobante se rechaza si una cuenta no existe o no
-   admite movimientos.
+2. Exportar el **Listado de cuentas contables** de cada compañía e importarlo, y señalar
+   qué cuenta usan para **proveedores** e **IVA descontable** (se configura en la misma
+   pantalla). Sin eso la causación no corre: no hay códigos por defecto quemados.
 
 ## Detalles técnicos
 
