@@ -47,11 +47,15 @@ pública, no de una llamada verificada).
 
 Por orden sugerido:
 
-1. **Retenciones** — el hueco contable más grande. Bloqueado por la pregunta 4 del
-   documento de preguntas: ¿el valor viene en el Excel de la DIAN o se calcula?
-   Las cuentas destino ya existen en el plan real (`2365xx` por concepto y tarifa).
+1. **Retenciones** — el hueco contable más grande. **Confirmado que hay que calcularlas**:
+   `Rete IVA` y `Rete Renta` vienen en cero en el archivo real, porque la retención la
+   practica el comprador y no aparece en la factura del proveedor. Falta que el equipo
+   contable dé los parámetros (autorretenedor, gran contribuyente, ICA por municipio,
+   regla de tarifa). Las cuentas destino ya existen en el plan real (`2365xx`).
 2. **Siigo en producción** — solo falta credenciales + tipo de comprobante.
-3. **Contado vs crédito** — bloqueado: el Excel de la DIAN no trae forma de pago.
+3. **Contado vs crédito** — **desbloqueado**: el Excel de la DIAN **sí trae** la columna
+   `Forma de Pago` (`1` y `2`, presumiblemente contado y crédito) y `Medio de Pago`. Falta
+   confirmar la equivalencia con el equipo contable e implementarlo.
 4. **Cuentas por pagar a fin de mes** — reporte de corte reusando la infra de informes.
 5. **Lectura de la representación gráfica** (PDF de la factura con IA) — resolvería de
    paso la forma de pago y el detalle de retenciones.
@@ -85,6 +89,25 @@ Por orden sugerido:
   hay reglas aprendidas y facturas ya causadas apuntando a esos códigos.
 - **`journals` sigue siendo el modo por defecto** hasta poder validar `purchases` contra la
   API real.
+
+## Lo que trae de verdad el Excel de la DIAN
+
+Verificado el 2026-07-28 contra archivos reales (`RECIBIDOS ENERO.xlsx`, 72 facturas).
+Columnas: `Tipo de documento`, `CUFE/CUDE`, `Folio`, `Prefijo`, `Divisa`, **`Forma de
+Pago`**, **`Medio de Pago`**, `Fecha Emisión`, `Fecha Recepción`, `NIT Emisor`,
+`Nombre Emisor`, `NIT Receptor`, `Nombre Receptor`, `IVA`, y una docena de impuestos
+menores, `Rete IVA`, `Rete Renta`, `Rete ICA`, `Total`, `Estado`, `Grupo`.
+
+Tres cosas que no son obvias:
+
+- **`Rete ICA` NO es una retención: es la base gravable.** Comprobado — IVA 128.478 +
+  "ReteICA" 676.200 = Total 804.678, y 676.200 × 19 % = 128.478. La DIAN etiqueta mal esa
+  columna. **No mapearla como retención**: se contabilizaría el subtotal como retención.
+  El cleaner no la lee y calcula el subtotal como `TOTAL - IVA`, que da lo mismo.
+- **No hay columna de concepto ni descripción.** Por eso `concept_description` queda vacío
+  y el aprendizaje matchea **solo por NIT del proveedor**. Funciona, pero no distingue dos
+  tipos de gasto del mismo proveedor.
+- **No hay columna de subtotal.** Se deriva de `TOTAL - IVA`.
 
 ## Trampas conocidas del entorno
 
