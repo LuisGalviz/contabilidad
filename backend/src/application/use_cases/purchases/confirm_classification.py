@@ -3,13 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from src.application.use_cases.purchases.suggest_mapping import extract_keywords
+from src.application.use_cases.purchases.suggest_mapping import (
+    SuggestMappingUseCase,
+    extract_keywords,
+)
 from src.domain.entities.classification_history import (
     ClassificationAction,
     ClassificationHistoryEntry,
 )
 from src.domain.entities.mapping_rule import SupplierMappingRule
-from src.domain.entities.supplier_invoice import SupplierInvoice
+from src.domain.entities.supplier_invoice import InvoiceStatus, SupplierInvoice
 from src.domain.repositories.classification_history_repository import (
     ClassificationHistoryRepository,
 )
@@ -25,13 +28,17 @@ class InvoiceNotFoundError(Exception):
 class ConfirmInvoiceClassificationUseCase:
     """The "teach the system" flow: applies a human's account choice to an
     invoice and updates (or creates) the learned `SupplierMappingRule` —
-    a confirmation if the human accepted the suggestion as-is, a correction
-    (which lowers confidence) if they picked something different.
+    a confirmation if the human accepted what the system had learned for that
+    supplier, a correction (which lowers confidence) if they picked something
+    different. After learning, the rule is propagated to the other pending
+    invoices of the same supplier so the accountant immediately sees the
+    recognition ("teach once, recognize the rest").
     """
 
     invoice_repo: SupplierInvoiceRepository
     mapping_rule_repo: SupplierMappingRuleRepository
     history_repo: ClassificationHistoryRepository
+    suggest_mapping: SuggestMappingUseCase
 
     async def execute(
         self,
@@ -44,16 +51,25 @@ class ConfirmInvoiceClassificationUseCase:
         if invoice is None:
             raise InvoiceNotFoundError(f"Invoice {invoice_id} not found")
 
-        was_suggested = invoice.suggested_account_code == account_code
-        account_before = invoice.suggested_account_code
-
-        invoice.confirm_classification(account_code, cost_center_id, user_id)
-        await self.invoice_repo.save(invoice)
-
         keywords = extract_keywords(invoice.concept_description)
+        # The rule as it stands *before* this human action — what the system
+        # "would have suggested" for this supplier, whether or not that
+        # suggestion was surfaced on this particular invoice.
         rule = await self.mapping_rule_repo.find_best_match(
             invoice.tenant_id, invoice.client_id, invoice.supplier_nit, keywords
         )
+        # Accepted-as-suggested if the human's choice matches the suggestion
+        # shown on the invoice OR the account the rule already learned. This is
+        # what makes repeat confirmations raise confidence instead of being
+        # mistaken for corrections.
+        was_suggested = invoice.suggested_account_code == account_code or (
+            rule is not None and rule.account_code == account_code
+        )
+        account_before = invoice.suggested_account_code or (rule.account_code if rule else None)
+        is_new_rule = rule is None
+
+        invoice.confirm_classification(account_code, cost_center_id, user_id)
+        await self.invoice_repo.save(invoice)
 
         if rule is None:
             rule = SupplierMappingRule(
@@ -77,7 +93,9 @@ class ConfirmInvoiceClassificationUseCase:
             ClassificationHistoryEntry(
                 invoice_id=invoice.id,
                 tenant_id=invoice.tenant_id,
-                action=ClassificationAction.CONFIRMED if was_suggested else ClassificationAction.CORRECTED,
+                action=ClassificationAction.CONFIRMED
+                if (was_suggested or is_new_rule)
+                else ClassificationAction.CORRECTED,
                 account_code_before=account_before,
                 account_code_after=account_code,
                 rule_id=rule.id,
@@ -85,4 +103,22 @@ class ConfirmInvoiceClassificationUseCase:
             )
         )
 
+        await self._propagate_to_pending_siblings(invoice, rule)
+
         return invoice, rule
+
+    async def _propagate_to_pending_siblings(
+        self, invoice: SupplierInvoice, rule: SupplierMappingRule
+    ) -> None:
+        """Apply the just-learned rule as a suggestion to the other still-pending
+        invoices of the same supplier, so a single classification lights up all
+        of that supplier's remaining invoices in the review screen."""
+        pending = await self.invoice_repo.list_by_client(
+            invoice.tenant_id, invoice.client_id, InvoiceStatus.PENDING_REVIEW
+        )
+        for sibling in pending:
+            if sibling.id == invoice.id or sibling.supplier_nit != invoice.supplier_nit:
+                continue
+            used = await self.suggest_mapping.execute(sibling)
+            if used is not None:
+                await self.invoice_repo.save(sibling)

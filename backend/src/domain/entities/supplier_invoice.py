@@ -35,6 +35,7 @@ class SupplierInvoice:
     vat_amount: Decimal
     total_amount: Decimal
     id: UUID = field(default_factory=uuid4)
+    is_credit_note: bool = False
     status: InvoiceStatus = InvoiceStatus.PENDING_REVIEW
     suggested_account_code: str | None = None
     suggested_cost_center_id: UUID | None = None

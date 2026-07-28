@@ -173,7 +173,11 @@ async def list_invoices(
 
     repo = SQLSupplierInvoiceRepository(session)
     if batch_id:
-        invoices = [inv for inv in await repo.list_by_batch(UUID(batch_id)) if inv.tenant_id == current.tenant_id]
+        invoices = [
+            inv
+            for inv in await repo.list_by_batch(UUID(batch_id))
+            if inv.tenant_id == current.tenant_id and (invoice_status is None or inv.status == invoice_status)
+        ]
     else:
         invoices = await repo.list_by_client(current.tenant_id, UUID(client_id), invoice_status)
     return SupplierInvoiceListResponse(items=[_invoice_to_response(inv) for inv in invoices], total=len(invoices))
@@ -207,10 +211,12 @@ async def classify_invoice(
     if not existing or existing.tenant_id != current.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Invoice not found")
 
+    mapping_rule_repo = SQLSupplierMappingRuleRepository(session)
     use_case = ConfirmInvoiceClassificationUseCase(
         invoice_repo=invoice_repo,
-        mapping_rule_repo=SQLSupplierMappingRuleRepository(session),
+        mapping_rule_repo=mapping_rule_repo,
         history_repo=SQLClassificationHistoryRepository(session),
+        suggest_mapping=SuggestMappingUseCase(mapping_rule_repo),
     )
     invoice, _rule = await use_case.execute(
         UUID(invoice_id),
@@ -232,10 +238,12 @@ async def bulk_classify_invoices(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="No tenant associated")
 
     invoice_repo = SQLSupplierInvoiceRepository(session)
+    mapping_rule_repo = SQLSupplierMappingRuleRepository(session)
     use_case = ConfirmInvoiceClassificationUseCase(
         invoice_repo=invoice_repo,
-        mapping_rule_repo=SQLSupplierMappingRuleRepository(session),
+        mapping_rule_repo=mapping_rule_repo,
         history_repo=SQLClassificationHistoryRepository(session),
+        suggest_mapping=SuggestMappingUseCase(mapping_rule_repo),
     )
     cost_center_id = UUID(body.cost_center_id) if body.cost_center_id else None
 
@@ -292,10 +300,21 @@ async def generate_causation(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Client not found")
 
     invoice_ids = [UUID(i) for i in body.invoice_ids]
-    background_tasks.add_task(
-        _run_causation_generation, current.tenant_id, UUID(body.client_id), current.user_id, body.period, invoice_ids
+
+    # Resolve the eligible invoices synchronously so we can give the caller an
+    # honest count (and short-circuit when there's nothing to cause) instead of
+    # always returning a fake "success" and skipping in the background.
+    invoice_repo = SQLSupplierInvoiceRepository(session)
+    eligible_ids = await _resolve_eligible_invoice_ids(
+        invoice_repo, current.tenant_id, UUID(body.client_id), body.period, invoice_ids
     )
-    return CausationGenerateResponse(entries=[], reports_triggered=True)
+    if not eligible_ids:
+        return CausationGenerateResponse(entries=[], reports_triggered=False, eligible_count=0)
+
+    background_tasks.add_task(
+        _run_causation_generation, current.tenant_id, UUID(body.client_id), current.user_id, body.period, eligible_ids
+    )
+    return CausationGenerateResponse(entries=[], reports_triggered=True, eligible_count=len(eligible_ids))
 
 
 @router.get("/causation", response_model=CausationEntryListResponse)
@@ -311,6 +330,22 @@ async def list_causation_entries(
     repo = SQLCausationEntryRepository(session)
     entries = await repo.list_by_client(current.tenant_id, UUID(client_id), period)
     return CausationEntryListResponse(items=[_entry_to_response(e) for e in entries], total=len(entries))
+
+
+async def _resolve_eligible_invoice_ids(
+    invoice_repo: SQLSupplierInvoiceRepository,
+    tenant_id: UUID,
+    client_id: UUID,
+    period: str,
+    invoice_ids: list[UUID],
+) -> list[UUID]:
+    """Which invoices will actually be caused. When explicit ids are given we
+    trust the caller's selection; otherwise it's every CLASSIFIED invoice whose
+    issue_date falls inside `period` (YYYY-MM)."""
+    if invoice_ids:
+        return invoice_ids
+    invoices = await invoice_repo.list_by_client_and_period(tenant_id, client_id, period)
+    return [inv.id for inv in invoices if inv.status == InvoiceStatus.CLASSIFIED]
 
 
 async def _run_causation_generation(
@@ -333,10 +368,7 @@ async def _run_causation_generation(
         causation_repo = SQLCausationEntryRepository(session)
         client_repo = SQLClientRepository(session)
 
-        target_ids = invoice_ids
-        if not target_ids:
-            invoices = await invoice_repo.list_by_client_and_period(tenant_id, client_id, period)
-            target_ids = [inv.id for inv in invoices if inv.status == InvoiceStatus.CLASSIFIED]
+        target_ids = await _resolve_eligible_invoice_ids(invoice_repo, tenant_id, client_id, period, invoice_ids)
 
         if not target_ids:
             logger.info("causation_generation_skipped_no_invoices", client_id=str(client_id), period=period)
@@ -459,6 +491,7 @@ def _invoice_to_response(invoice: SupplierInvoice) -> SupplierInvoiceResponse:
         subtotal=invoice.subtotal,
         vat_amount=invoice.vat_amount,
         total_amount=invoice.total_amount,
+        is_credit_note=invoice.is_credit_note,
         status=invoice.status,
         suggested_account_code=invoice.suggested_account_code,
         suggested_cost_center_id=str(invoice.suggested_cost_center_id) if invoice.suggested_cost_center_id else None,

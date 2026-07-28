@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 # `sazon/cleaner.py::SALES_ALIASES`, so a future column rename on DIAN's side
 # is a one-line addition here, not a rewrite.
 DIAN_ALIASES: dict[str, list[str]] = {
-    "CUFE": ["CUFE", "CUDE", "CODIGO UNICO"],
+    "TIPO_DOCUMENTO": ["TIPO DE DOCUMENTO", "TIPO DOCUMENTO"],
+    "CUFE": ["CUFE/CUDE", "CUFE", "CUDE", "CODIGO UNICO"],
     "NIT_EMISOR": ["NIT EMISOR", "NIT DEL EMISOR", "IDENTIFICACION EMISOR", "NIT", "DOCUMENTO EMISOR"],
     "RAZON_SOCIAL_EMISOR": ["RAZON SOCIAL EMISOR", "NOMBRE EMISOR", "RAZON SOCIAL", "EMISOR"],
     "FECHA_EMISION": ["FECHA EMISION", "FECHA DE EMISION", "FECHA"],
@@ -28,6 +29,13 @@ DIAN_ALIASES: dict[str, list[str]] = {
 }
 
 REQUIRED_COLUMNS = ["CUFE", "NIT_EMISOR", "TOTAL"]
+
+
+def is_credit_note(document_type: object) -> bool:
+    """DIAN's `Tipo de documento` reads 'Nota de crédito electrónica' for credit
+    notes (vs 'Factura electrónica'). Credit notes reverse the purchase, so
+    causación must invert their accounting entry."""
+    return "CREDITO" in normalize_text(document_type)
 
 
 def normalize_nit(value: object) -> str:

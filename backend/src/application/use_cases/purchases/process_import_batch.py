@@ -36,7 +36,11 @@ class ProcessImportBatchUseCase:
             batch.mark_processing()
             await self.batch_repo.save(batch)
 
-            from src.infrastructure.purchases.dian.cleaner import load_dian_invoices, row_issue_date
+            from src.infrastructure.purchases.dian.cleaner import (
+                is_credit_note,
+                load_dian_invoices,
+                row_issue_date,
+            )
 
             df, _ = load_dian_invoices(BytesIO(file_bytes))
 
@@ -64,17 +68,21 @@ class ProcessImportBatchUseCase:
                         subtotal=_as_decimal(row["SUBTOTAL"]),
                         vat_amount=_as_decimal(row["IVA"]),
                         total_amount=_as_decimal(row["TOTAL"]),
+                        is_credit_note=is_credit_note(row["TIPO_DOCUMENTO"]),
                         raw_row={str(k): str(v) for k, v in row.items()},
                     )
 
+                    # Persist the invoice *before* suggesting/auto-confirming: the
+                    # learned-rule path writes a classification_history row that
+                    # FK-references this invoice, so it must already exist in the
+                    # table. A second save persists the suggestion/auto-classify.
+                    await self.invoice_repo.save(invoice)
                     await self._suggest_and_maybe_auto_confirm(invoice)
+                    await self.invoice_repo.save(invoice)
                     new_invoices.append(invoice)
                 except Exception as row_exc:
                     error_count += 1
                     logger.warning("dian_row_skipped", batch_id=str(batch.id), error=str(row_exc))
-
-            if new_invoices:
-                await self.invoice_repo.save_many(new_invoices)
 
             batch.mark_completed(total_rows, len(new_invoices), duplicate_count, error_count)
             await self.batch_repo.save(batch)

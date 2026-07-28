@@ -14,6 +14,7 @@
     "selected": "{count} selected",
     "clearFilters": "Clear filters",
     "download": "Download",
+    "downloads": "Downloads",
     "view": "View",
     "unexpectedError": "Unexpected error. Please try again."
   },
@@ -388,12 +389,16 @@
       "generateCausation": "Generate causación",
       "generating": "Generating causación and reports in the background...",
       "generateHint": "Classify invoices before generating causación. The system will automatically generate the general and personalized reports for the period.",
+      "classifiedReady": "{count} classified invoices ready to post in this batch.",
+      "generateQueued": "Posting {count} invoices. Reports will appear under Reports once ready.",
+      "generateNone": "No classified invoices to post for {period}. Check that the period matches the invoice dates and that you have classified them.",
       "generateSuccess": "Causación in progress. Reports will appear under Reports once ready.",
       "viewInvoices": "View invoices in this batch"
     }
   },
   "invoiceReview": {
     "title": "Invoice review",
+    "back": "Back",
     "subtitle": "{count} invoices",
     "empty": "No invoices to review.",
     "filters": {
@@ -429,7 +434,12 @@
       "selectAccount": "Select an account"
     },
     "learned": "The system will remember this classification for this supplier's future invoices.",
-    "rejectPrompt": "Rejection reason"
+    "rejectPrompt": "Rejection reason",
+    "confirmed": "Confirmed",
+    "change": "Change",
+    "cancel": "Cancel",
+    "rejectTitle": "Reject invoice",
+    "rejectPlaceholder": "Type the rejection reason…"
   },
   "settings": {
     "badge": "Settings",

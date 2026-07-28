@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -166,6 +166,7 @@ class SupplierInvoiceModel(Base):
     subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     vat_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    is_credit_note: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default=text("false"))
     status: Mapped[str] = mapped_column(String(30), default="pending_review")
     suggested_account_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     suggested_cost_center_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

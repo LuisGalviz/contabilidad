@@ -1,13 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import { clientApi, purchaseApi, pucApi } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import type { SupplierInvoice } from '@/types'
-import { Check, X } from 'lucide-react'
+import { ArrowLeft, Check, X } from 'lucide-react'
 
 function cop(v: number) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v)
@@ -51,16 +51,21 @@ export default function InvoiceReviewPage() {
   const t = useTranslations('invoiceReview')
   const tCommon = useTranslations('common')
   const qc = useQueryClient()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const batchId = searchParams.get('batch_id') ?? undefined
+  const backHref = batchId ? `/dashboard/purchases/${batchId}` : '/dashboard/purchases'
 
   const { data: clients } = useQuery({ queryKey: ['clients'], queryFn: clientApi.list })
   const [clientId, setClientId] = useState(searchParams.get('client_id') ?? '')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({})
   const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [editing, setEditing] = useState<Set<string>>(new Set())
   const [bulkAccount, setBulkAccount] = useState('')
   const [error, setError] = useState('')
+  const [rejectingId, setRejectingId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
   const { data: accounts } = useQuery({ queryKey: ['puc-accounts'], queryFn: () => pucApi.listAccounts() })
 
@@ -75,16 +80,32 @@ export default function InvoiceReviewPage() {
     enabled: !!clientId,
   })
 
+  function stopEditing(id: string) {
+    setEditing((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }
+
   const classify = useMutation({
     mutationFn: ({ id, account_code }: { id: string; account_code: string }) =>
       purchaseApi.classifyInvoice(id, { account_code }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-invoices'] }),
+    onSuccess: (_data, { id }) => {
+      stopEditing(id)
+      qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
+    },
     onError: (e: any) => setError(apiError(e)),
   })
 
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => purchaseApi.rejectInvoice(id, reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['purchase-invoices'] }),
+    onSuccess: () => {
+      setRejectingId(null)
+      setRejectReason('')
+      qc.invalidateQueries({ queryKey: ['purchase-invoices'] })
+    },
     onError: (e: any) => setError(apiError(e)),
   })
 
@@ -112,9 +133,18 @@ export default function InvoiceReviewPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{t('subtitle', { count: invoices?.total ?? 0 })}</p>
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => router.push(backHref)}
+            className="mt-0.5 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+            aria-label={t('back')}
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">{t('title')}</h1>
+            <p className="text-sm text-gray-500 mt-0.5">{t('subtitle', { count: invoices?.total ?? 0 })}</p>
+          </div>
         </div>
       </div>
 
@@ -192,8 +222,10 @@ export default function InvoiceReviewPage() {
             <tbody className="divide-y divide-gray-100">
               {invoices.items.map((inv: SupplierInvoice) => {
                 const confidenceKey = inv.classification_source ?? 'none'
-                const selected = selectedAccounts[inv.id] ?? inv.suggested_account_code ?? ''
-                const canEdit = inv.status === 'pending_review' || inv.status === 'classified'
+                const selected = selectedAccounts[inv.id] ?? inv.final_account_code ?? inv.suggested_account_code ?? ''
+                const isConfirmed = inv.status === 'classified' || inv.status === 'caused'
+                const canEdit = inv.status === 'pending_review' || editing.has(inv.id)
+                const confirmedAccount = accountOptions.find((a) => a.code === inv.final_account_code)
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
@@ -222,12 +254,16 @@ export default function InvoiceReviewPage() {
                           accounts={accountOptions}
                           placeholder={t('actions.selectAccount')}
                         />
+                      ) : isConfirmed ? (
+                        <span className="text-xs text-gray-700">
+                          {confirmedAccount ? `${confirmedAccount.code} · ${confirmedAccount.name}` : inv.final_account_code ?? '—'}
+                        </span>
                       ) : (
-                        <span className="text-xs text-gray-500">{inv.final_account_code ?? '—'}</span>
+                        <span className="text-xs text-gray-400">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {canEdit && (
+                      {canEdit ? (
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => classify.mutate({ id: inv.id, account_code: selected })}
@@ -238,14 +274,30 @@ export default function InvoiceReviewPage() {
                           </button>
                           <button
                             onClick={() => {
-                              const reason = window.prompt(t('rejectPrompt')) ?? ''
-                              if (reason) reject.mutate({ id: inv.id, reason })
+                              setRejectReason('')
+                              setRejectingId(inv.id)
                             }}
                             className="flex items-center gap-1 text-xs text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50"
                           >
                             <X size={12} /> {t('actions.reject')}
                           </button>
                         </div>
+                      ) : isConfirmed ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                            <Check size={12} /> {t('confirmed')}
+                          </span>
+                          {inv.status === 'classified' && (
+                            <button
+                              onClick={() => setEditing((prev) => new Set(prev).add(inv.id))}
+                              className="text-xs text-gray-500 underline hover:text-gray-700"
+                            >
+                              {t('change')}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">{t(`status.${inv.status}`)}</span>
                       )}
                     </td>
                   </tr>
@@ -255,6 +307,43 @@ export default function InvoiceReviewPage() {
           </table>
         )}
       </div>
+
+      {rejectingId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setRejectingId(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-gray-900 mb-3">{t('rejectTitle')}</h3>
+            <textarea
+              autoFocus
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder={t('rejectPlaceholder')}
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0B6B57] resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setRejectingId(null)}
+                className="text-sm text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={() => reject.mutate({ id: rejectingId, reason: rejectReason.trim() })}
+                disabled={!rejectReason.trim() || reject.isPending}
+                className="flex items-center gap-1 text-sm text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                <X size={14} /> {t('actions.reject')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

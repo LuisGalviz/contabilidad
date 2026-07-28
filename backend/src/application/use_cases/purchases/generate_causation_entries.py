@@ -37,12 +37,19 @@ class GenerateCausationEntriesUseCase:
                     f"Invoice {invoice_id} must be CLASSIFIED with a final account before causación"
                 )
 
+            # A normal purchase debits the expense/IVA and credits proveedores.
+            # A credit note reverses the purchase, so every side flips: the
+            # expense/IVA are credited and proveedores is debited.
+            zero = Decimal("0")
+            nc = invoice.is_credit_note
+            nc_tag = " (nota crédito)" if nc else ""
+
             lines = [
                 CausationEntryLine(
                     account_code=invoice.final_account_code,
-                    debit=invoice.subtotal,
-                    credit=Decimal("0"),
-                    description=f"{invoice.supplier_name} - {invoice.concept_description}"[:255],
+                    debit=zero if nc else invoice.subtotal,
+                    credit=invoice.subtotal if nc else zero,
+                    description=f"{invoice.supplier_name} - {invoice.concept_description}{nc_tag}"[:255],
                     cost_center_id=invoice.final_cost_center_id,
                 )
             ]
@@ -50,17 +57,17 @@ class GenerateCausationEntriesUseCase:
                 lines.append(
                     CausationEntryLine(
                         account_code=IVA_DESCONTABLE_ACCOUNT,
-                        debit=invoice.vat_amount,
-                        credit=Decimal("0"),
-                        description="IVA descontable",
+                        debit=zero if nc else invoice.vat_amount,
+                        credit=invoice.vat_amount if nc else zero,
+                        description=f"IVA descontable{nc_tag}",
                     )
                 )
             lines.append(
                 CausationEntryLine(
                     account_code=PROVEEDORES_ACCOUNT,
-                    debit=Decimal("0"),
-                    credit=invoice.total_amount,
-                    description=f"Cuenta por pagar - {invoice.supplier_name}",
+                    debit=invoice.total_amount if nc else zero,
+                    credit=zero if nc else invoice.total_amount,
+                    description=f"Cuenta por pagar - {invoice.supplier_name}{nc_tag}",
                 )
             )
 

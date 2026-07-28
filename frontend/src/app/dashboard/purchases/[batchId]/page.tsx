@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
@@ -19,8 +19,10 @@ export default function ImportBatchDetailPage() {
   const tCommon = useTranslations('common')
   const { batchId } = useParams<{ batchId: string }>()
   const router = useRouter()
-  const [period, setPeriod] = useState(currentPeriod())
+  const [period, setPeriod] = useState('')
+  const [periodTouched, setPeriodTouched] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'success' | 'warning'>('success')
 
   const { data: batch, isLoading, error } = useQuery({
     queryKey: ['import-batch', batchId],
@@ -29,10 +31,49 @@ export default function ImportBatchDetailPage() {
       query.state.data?.status === 'pending' || query.state.data?.status === 'processing' ? 2000 : false,
   })
 
+  // Invoices in this batch, used to (a) suggest the right period — invoices are
+  // filtered by issue_date, not the current month — and (b) show how many are
+  // classified and therefore ready to cause.
+  const { data: invoices } = useQuery({
+    queryKey: ['batch-invoices', batchId],
+    queryFn: () => purchaseApi.listInvoices({ batch_id: batchId }),
+    enabled: batch?.status === 'completed',
+  })
+
+  const suggestedPeriod = useMemo(() => {
+    const months = (invoices?.items ?? [])
+      .map((inv) => inv.issue_date?.slice(0, 7))
+      .filter(Boolean)
+      .sort()
+    return months.length ? months[months.length - 1]! : currentPeriod()
+  }, [invoices])
+
+  const classifiedCount = useMemo(
+    () => (invoices?.items ?? []).filter((inv) => inv.status === 'classified').length,
+    [invoices],
+  )
+
+  // Default the period to the batch's own invoice month until the user picks one.
+  useEffect(() => {
+    if (!periodTouched) setPeriod(suggestedPeriod)
+  }, [suggestedPeriod, periodTouched])
+
   const generateCausation = useMutation({
     mutationFn: () => purchaseApi.generateCausation({ client_id: batch!.client_id, period }),
-    onSuccess: () => setMessage(t('batch.generateSuccess')),
-    onError: (e: any) => setMessage(apiError(e)),
+    onSuccess: (data: { eligible_count?: number }) => {
+      const count = data?.eligible_count ?? 0
+      if (count > 0) {
+        setMessageType('success')
+        setMessage(t('batch.generateQueued', { count }))
+      } else {
+        setMessageType('warning')
+        setMessage(t('batch.generateNone', { period }))
+      }
+    },
+    onError: (e: any) => {
+      setMessageType('warning')
+      setMessage(apiError(e))
+    },
   })
 
   if (isLoading) {
@@ -104,15 +145,23 @@ export default function ImportBatchDetailPage() {
 
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <h2 className="font-semibold text-gray-900 mb-1 text-sm">{t('batch.causationTitle')}</h2>
-            <p className="text-xs text-gray-500 mb-4">{t('batch.generateHint')}</p>
-            {message && <p className="text-sm text-[#0B6B57] mb-3">{message}</p>}
+            <p className="text-xs text-gray-500 mb-2">{t('batch.generateHint')}</p>
+            <p className="text-xs text-gray-600 mb-4">{t('batch.classifiedReady', { count: classifiedCount })}</p>
+            {message && (
+              <p className={`text-sm mb-3 ${messageType === 'warning' ? 'text-amber-600' : 'text-[#0B6B57]'}`}>
+                {message}
+              </p>
+            )}
             <div className="flex items-end gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">{t('batch.period')}</label>
                 <input
                   type="month"
                   value={period}
-                  onChange={(e) => setPeriod(e.target.value)}
+                  onChange={(e) => {
+                    setPeriodTouched(true)
+                    setPeriod(e.target.value)
+                  }}
                   className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0B6B57]"
                 />
               </div>

@@ -14,6 +14,7 @@
     "selected": "{count} seleccionados",
     "clearFilters": "Limpiar filtros",
     "download": "Descargar",
+    "downloads": "Descargas",
     "view": "Ver",
     "unexpectedError": "Error inesperado. Intenta de nuevo."
   },
@@ -388,12 +389,16 @@
       "generateCausation": "Generar causación",
       "generating": "Generando causación e informes en segundo plano...",
       "generateHint": "Clasifica las facturas antes de generar la causación. El sistema generará automáticamente el informe general y el personalizado del periodo.",
+      "classifiedReady": "{count} facturas clasificadas listas para causar en esta carga.",
+      "generateQueued": "Causando {count} facturas. Los informes aparecerán en Informes cuando estén listos.",
+      "generateNone": "No hay facturas clasificadas para causar en {period}. Verifica que el periodo coincida con la fecha de las facturas y que ya las hayas clasificado.",
       "generateSuccess": "Causación en proceso. Los informes aparecerán en Informes cuando estén listos.",
       "viewInvoices": "Ver facturas de esta carga"
     }
   },
   "invoiceReview": {
     "title": "Revisión de facturas",
+    "back": "Volver",
     "subtitle": "{count} facturas",
     "empty": "No hay facturas para revisar.",
     "filters": {
@@ -429,7 +434,12 @@
       "selectAccount": "Selecciona una cuenta"
     },
     "learned": "El sistema recordará esta clasificación para las próximas facturas de este proveedor.",
-    "rejectPrompt": "Motivo del rechazo"
+    "rejectPrompt": "Motivo del rechazo",
+    "confirmed": "Confirmada",
+    "change": "Cambiar",
+    "cancel": "Cancelar",
+    "rejectTitle": "Rechazar factura",
+    "rejectPlaceholder": "Escribe el motivo del rechazo…"
   },
   "settings": {
     "badge": "Configuración",

@@ -40,6 +40,7 @@ class SupplierInvoiceResponse(BaseModel):
     subtotal: Decimal
     vat_amount: Decimal
     total_amount: Decimal
+    is_credit_note: bool
     status: InvoiceStatus
     suggested_account_code: str | None
     suggested_cost_center_id: str | None
@@ -102,3 +103,4 @@ class CausationEntryListResponse(BaseModel):
 class CausationGenerateResponse(BaseModel):
     entries: list[CausationEntryResponse]
     reports_triggered: bool
+    eligible_count: int = 0
