@@ -530,6 +530,8 @@ def _invoice_to_response(invoice: SupplierInvoice) -> SupplierInvoiceResponse:
         vat_amount=invoice.vat_amount,
         total_amount=invoice.total_amount,
         is_credit_note=invoice.is_credit_note,
+        document_prefix=invoice.document_prefix,
+        document_number=invoice.document_number,
         status=invoice.status,
         suggested_account_code=invoice.suggested_account_code,
         suggested_cost_center_id=str(invoice.suggested_cost_center_id) if invoice.suggested_cost_center_id else None,

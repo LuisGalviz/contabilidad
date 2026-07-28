@@ -41,6 +41,8 @@ class SupplierInvoiceResponse(BaseModel):
     vat_amount: Decimal
     total_amount: Decimal
     is_credit_note: bool
+    document_prefix: str
+    document_number: str
     status: InvoiceStatus
     suggested_account_code: str | None
     suggested_cost_center_id: str | None
