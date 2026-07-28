@@ -26,11 +26,17 @@ SIIGO_ALIASES: dict[str, list[str]] = {
     "CODIGO": ["CODIGO", "CODIGO CUENTA", "CUENTA", "CODIGO CONTABLE", "COD", "CODIGO DE CUENTA"],
     "NOMBRE": ["NOMBRE", "NOMBRE CUENTA", "DESCRIPCION", "NOMBRE DE LA CUENTA", "DESCRIPCION CUENTA"],
     "CLASE": ["CLASE", "TIPO", "NATURALEZA", "CLASE CUENTA", "GRUPO"],
-    "ACTIVA": ["ACTIVA", "ESTADO", "ACTIVO", "HABILITADA"],
+    "ACTIVA": ["ACTIVO", "ACTIVA", "ESTADO", "HABILITADA"],
     "CENTRO_COSTO": ["CENTRO DE COSTO", "EXIGE CENTRO DE COSTO", "MANEJA CENTRO DE COSTO", "CENTRO COSTO"],
+    # Siigo distingue cuentas de agrupación de las que admiten movimiento.
+    "NIVEL": ["NIVEL AGRUPACION", "NIVEL DE AGRUPACION", "NIVEL", "TIPO DE CUENTA"],
 }
 
 REQUIRED_COLUMNS = ["CODIGO", "NOMBRE"]
+
+# Valor de `Nivel agrupación` que marca las cuentas donde sí se puede registrar
+# movimiento. Las demás son niveles de agrupación del árbol contable.
+TRANSACTIONAL_LEVEL = "TRANSACCIONAL"
 
 # Primer dígito del código PUC -> clase, según el decreto 2650. Se usa cuando el
 # archivo no trae columna de clase, que es lo normal: en el PUC la clase está
@@ -43,9 +49,23 @@ CLASS_BY_FIRST_DIGIT: dict[str, str] = {
     "5": "gasto",
     "6": "costo",
     "7": "costo",
+    "8": "orden",
+    "9": "orden",
 }
 
-VALID_CLASSES = {"activo", "pasivo", "patrimonio", "ingreso", "gasto", "costo"}
+# Siigo nombra las clases distinto al decreto (plurales, "Costos de venta",
+# "Cuentas de orden acreedoras"…), así que no se pueden comparar directo.
+SIIGO_CLASS_LABELS: dict[str, str] = {
+    "ACTIVO": "activo",
+    "PASIVO": "pasivo",
+    "PATRIMONIO": "patrimonio",
+    "INGRESO": "ingreso",
+    "INGRESOS": "ingreso",
+    "GASTO": "gasto",
+    "GASTOS": "gasto",
+}
+
+VALID_CLASSES = {"activo", "pasivo", "patrimonio", "ingreso", "gasto", "costo", "orden"}
 
 _TRUTHY = {"SI", "S", "TRUE", "1", "X", "ACTIVA", "ACTIVO", "HABILITADA"}
 _FALSY = {"NO", "N", "FALSE", "0", "INACTIVA", "INACTIVO", "ANULADA"}
@@ -84,11 +104,18 @@ def _parse_bool(value: object, default: bool) -> bool:
 
 
 def resolve_account_class(code: str, raw_class: object) -> str:
-    """La clase declarada manda si es una de las nuestras; si no, se deduce del
-    primer dígito del código."""
-    declared = normalize_text(raw_class).lower()
-    if declared in VALID_CLASSES:
-        return declared
+    """Traduce la clase declarada por Siigo; si no se reconoce, se deduce del
+    primer dígito del código, que en el PUC ya codifica la clase."""
+    declared = normalize_text(raw_class)
+    if declared in SIIGO_CLASS_LABELS:
+        return SIIGO_CLASS_LABELS[declared]
+    # "Costos de venta", "Costos de producción o de operación"…
+    if declared.startswith("COSTO"):
+        return "costo"
+    if declared.startswith("CUENTAS DE ORDEN"):
+        return "orden"
+    if declared.lower() in VALID_CLASSES:
+        return declared.lower()
     return CLASS_BY_FIRST_DIGIT.get(code[:1], "gasto")
 
 
@@ -151,9 +178,15 @@ def load_siigo_chart_of_accounts(file: BytesIO) -> tuple[list[dict[str, object]]
         if column not in df.columns:
             df[column] = None
 
+    # Si el archivo declara el nivel, solo las transaccionales sirven. Cuando la
+    # columna no viene (otra versión del reporte) no hay forma de distinguirlas
+    # y se importan todas.
+    has_level_column = df["NIVEL"].notna().any()
+
     accounts: list[dict[str, object]] = []
     seen: set[str] = set()
     skipped_without_code = 0
+    skipped_group_accounts = 0
     duplicates = 0
 
     for _, row in df.iterrows():
@@ -161,6 +194,12 @@ def load_siigo_chart_of_accounts(file: BytesIO) -> tuple[list[dict[str, object]]
         name = _cell_text(row["NOMBRE"])
         if not code or not name:
             skipped_without_code += 1
+            continue
+        # Las cuentas de agrupación no admiten movimiento: Siigo rechaza el
+        # comprobante entero si se causa contra una de ellas, así que no deben
+        # llegar siquiera al selector de clasificación.
+        if has_level_column and normalize_text(row["NIVEL"]) != TRANSACTIONAL_LEVEL:
+            skipped_group_accounts += 1
             continue
         # `puc_accounts.code` es VARCHAR(10); un código más largo indica que la
         # columna leída no es la de código.
@@ -183,9 +222,15 @@ def load_siigo_chart_of_accounts(file: BytesIO) -> tuple[list[dict[str, object]]
         )
 
     if not accounts:
-        raise ValueError("El archivo no contiene ninguna cuenta con código y nombre válidos.")
+        raise ValueError(
+            "El archivo no contiene ninguna cuenta de movimiento con código y nombre válidos."
+        )
 
-    messages.append(f"{len(accounts)} cuentas leídas del archivo de Siigo.")
+    messages.append(f"{len(accounts)} cuentas de movimiento leídas del archivo de Siigo.")
+    if skipped_group_accounts:
+        messages.append(
+            f"{skipped_group_accounts} cuentas de agrupación omitidas: no admiten movimiento contable."
+        )
     if skipped_without_code:
         messages.append(f"{skipped_without_code} filas ignoradas por no tener código o nombre válido.")
     if duplicates:

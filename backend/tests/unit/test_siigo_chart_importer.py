@@ -42,6 +42,20 @@ class TestResolveAccountClass:
         assert resolve_account_class("5135", "Gasto") == "gasto"
 
     @pytest.mark.parametrize(
+        ("label", "expected"),
+        [
+            # Etiquetas tal como las escribe Siigo en el reporte real.
+            ("Gastos", "gasto"),
+            ("Ingresos", "ingreso"),
+            ("Costos de venta", "costo"),
+            ("Costos de producción o de operación", "costo"),
+            ("Cuentas de orden acreedoras", "orden"),
+        ],
+    )
+    def test_understands_siigos_own_class_labels(self, label, expected):
+        assert resolve_account_class("0000", label) == expected
+
+    @pytest.mark.parametrize(
         ("code", "expected"),
         [("1435", "activo"), ("2205", "pasivo"), ("3105", "patrimonio"), ("4135", "ingreso"), ("5135", "gasto"), ("6135", "costo")],
     )
@@ -68,7 +82,7 @@ class TestLoadSiigoChartOfAccounts:
         assert [a["code"] for a in accounts] == ["2205", "240801", "5135"]
         assert accounts[0]["name"] == "Proveedores nacionales"
         assert accounts[2]["is_active"] is False
-        assert "3 cuentas leídas" in messages[0]
+        assert "3 cuentas de movimiento leídas" in messages[0]
 
     def test_infers_class_when_the_file_has_no_class_column(self):
         file = _excel([["Codigo", "Nombre"], ["1524", "Equipo de oficina"], ["5110", "Honorarios"]])
@@ -105,6 +119,36 @@ class TestLoadSiigoChartOfAccounts:
         accounts, _ = load_siigo_chart_of_accounts(file)
 
         assert [a["code"] for a in accounts] == ["5110"]
+
+    def test_skips_group_accounts_that_cannot_receive_movements(self):
+        # Estructura del reporte real: el árbol de agrupación trae las columnas
+        # de detalle vacías y solo las "Transaccional" admiten movimiento.
+        file = _excel(
+            preamble=[["Cuentas contables"], ["INVERSIONES Y ASESORIAS JANO S.A.S"], ["900334100"], []],
+            rows=[
+                ["Código", "Nombre", "Categoría", "Clase", "Activo", "Nivel agrupación"],
+                ["1", "Activo", None, None, None, None],
+                ["11", "Efectivo y equivalentes", None, None, None, None],
+                ["1105", "Caja", None, None, None, None],
+                ["11050501", "Caja general", "Caja - Bancos", "Activo", "Sí", "Transaccional"],
+                ["22050501", "Proveedores nacionales", None, "Pasivo", "Sí", "Transaccional"],
+            ],
+        )
+
+        accounts, messages = load_siigo_chart_of_accounts(file)
+
+        # Causar contra una cuenta de agrupación hace que Siigo rechace el
+        # comprobante entero, así que no deben llegar ni al selector.
+        assert [a["code"] for a in accounts] == ["11050501", "22050501"]
+        assert any("agrupación" in m for m in messages)
+
+    def test_imports_everything_when_the_file_has_no_level_column(self):
+        file = _excel([["Codigo", "Nombre"], ["5135", "Servicios"], ["5110", "Honorarios"]])
+
+        accounts, _ = load_siigo_chart_of_accounts(file)
+
+        # Sin la columna no hay forma de distinguirlas; se importan todas.
+        assert len(accounts) == 2
 
     def test_rejects_a_file_that_is_not_a_chart_of_accounts(self):
         file = _excel([["Fecha", "Total"], ["2026-01-01", 1000]])

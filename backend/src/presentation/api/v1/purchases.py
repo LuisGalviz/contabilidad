@@ -391,6 +391,7 @@ async def _run_causation_generation(
         invoice_repo = SQLSupplierInvoiceRepository(session)
         causation_repo = SQLCausationEntryRepository(session)
         client_repo = SQLClientRepository(session)
+        puc_repo = SQLPUCAccountRepository(session)
 
         target_ids = await _resolve_eligible_invoice_ids(invoice_repo, tenant_id, client_id, period, invoice_ids)
 
@@ -403,6 +404,7 @@ async def _run_causation_generation(
             invoice_repo=invoice_repo,
             accounting_system=accounting_system,
             account_setting_repo=SQLClientAccountSettingRepository(session),
+            puc_account_repo=puc_repo,
         )
         try:
             await causation_use_case.execute(target_ids)
@@ -416,7 +418,6 @@ async def _run_causation_generation(
         await session.commit()
 
         report_repo = SQLReportRepository(session)
-        puc_repo = SQLPUCAccountRepository(session)
         report_use_case = CreateReportUseCase(report_repo=report_repo, client_repo=client_repo)
         generate_use_case = GenerateReportUseCase(
             report_repo=report_repo,

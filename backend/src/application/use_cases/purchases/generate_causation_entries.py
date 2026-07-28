@@ -11,6 +11,7 @@ from src.domain.entities.client_account_setting import AccountRole
 from src.domain.entities.supplier_invoice import InvoiceStatus
 from src.domain.ports.accounting_system_port import AccountingSystemPort
 from src.domain.repositories.client_account_setting_repository import ClientAccountSettingRepository
+from src.domain.repositories.puc_account_repository import PUCAccountRepository
 from src.domain.repositories.supplier_invoice_repository import SupplierInvoiceRepository
 
 logger = structlog.get_logger()
@@ -31,6 +32,7 @@ class GenerateCausationEntriesUseCase:
     invoice_repo: SupplierInvoiceRepository
     accounting_system: AccountingSystemPort
     account_setting_repo: ClientAccountSettingRepository
+    puc_account_repo: PUCAccountRepository
     _settings_cache: dict[UUID, dict[AccountRole, str]] = field(default_factory=dict, init=False)
 
     async def execute(self, invoice_ids: list[UUID]) -> list[CausationEntry]:
@@ -110,5 +112,16 @@ class GenerateCausationEntriesUseCase:
             raise MissingAccountSettingError(
                 f"El cliente {client_id} no tiene configurada la cuenta para '{role.value}'. "
                 "Defínela en la configuración contable del cliente antes de causar."
+            )
+
+        # Importar un plan de cuentas nuevo puede dejar la configuración
+        # apuntando a una cuenta que ya no existe. Sin esta verificación se
+        # generaría un asiento contra un código muerto y el rechazo llegaría
+        # desde el software contable, cuando ya es tarde.
+        account = await self.puc_account_repo.get_by_code(tenant_id, client_id, code)
+        if account is None or not account.is_active:
+            raise MissingAccountSettingError(
+                f"La cuenta {code} configurada para '{role.value}' no existe o está inactiva en el "
+                "plan de cuentas del cliente. Revisa la configuración contable."
             )
         return code

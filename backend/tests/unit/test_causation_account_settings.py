@@ -12,6 +12,7 @@ from src.application.use_cases.purchases.generate_causation_entries import (
 )
 from src.domain.entities.causation_entry import CausationEntry
 from src.domain.entities.client_account_setting import AccountRole
+from src.domain.entities.puc_account import PUCAccount
 from src.domain.entities.supplier_invoice import InvoiceStatus, SupplierInvoice
 
 TENANT = uuid4()
@@ -55,6 +56,21 @@ class FakeAccountingSystem:
         return entry
 
 
+class FakePUCRepo:
+    """Por defecto toda cuenta existe y está activa; `missing` simula las que
+    un plan recién importado dejó fuera."""
+
+    def __init__(self, missing: set[str] | None = None) -> None:
+        self._missing = missing or set()
+
+    async def get_by_code(self, tenant_id: UUID, client_id: UUID, code: str):
+        if code in self._missing:
+            return None
+        return PUCAccount(
+            tenant_id=tenant_id, client_id=client_id, code=code, name=code, account_class="gasto"
+        )
+
+
 class FakeSettingRepo:
     def __init__(self, codes: dict[AccountRole, str]) -> None:
         self._codes = codes
@@ -65,11 +81,14 @@ class FakeSettingRepo:
         return self._codes
 
 
-def _use_case(invoice: SupplierInvoice, codes: dict[AccountRole, str]) -> GenerateCausationEntriesUseCase:
+def _use_case(
+    invoice: SupplierInvoice, codes: dict[AccountRole, str], missing: set[str] | None = None
+) -> GenerateCausationEntriesUseCase:
     return GenerateCausationEntriesUseCase(
         invoice_repo=FakeInvoiceRepo(invoice),  # type: ignore[arg-type]
         accounting_system=FakeAccountingSystem(),  # type: ignore[arg-type]
         account_setting_repo=FakeSettingRepo(codes),  # type: ignore[arg-type]
+        puc_account_repo=FakePUCRepo(missing),  # type: ignore[arg-type]
     )
 
 
@@ -109,6 +128,7 @@ class TestCausationUsesClientAccounts:
             invoice_repo=FakeInvoiceRepo(*invoices),  # type: ignore[arg-type]
             accounting_system=FakeAccountingSystem(),  # type: ignore[arg-type]
             account_setting_repo=setting_repo,  # type: ignore[arg-type]
+            puc_account_repo=FakePUCRepo(),  # type: ignore[arg-type]
         )
 
         entries = await use_case.execute([inv.id for inv in invoices])
@@ -131,3 +151,18 @@ class TestCausationUsesClientAccounts:
         assert lines["220501"].debit == Decimal("119000")
         assert lines["5135"].credit == Decimal("100000")
         assert entries[0].is_balanced()
+
+    @pytest.mark.asyncio
+    async def test_fails_when_the_configured_account_no_longer_exists(self):
+        invoice = _invoice()
+        use_case = _use_case(
+            invoice,
+            {AccountRole.ACCOUNTS_PAYABLE: "2205", AccountRole.VAT_DEDUCTIBLE: "240801"},
+            missing={"2205"},
+        )
+
+        # Importar el plan real de la empresa puede dejar la configuración
+        # apuntando a un codigo muerto; sin esto el rechazo llegaria desde el
+        # software contable, cuando ya es tarde.
+        with pytest.raises(MissingAccountSettingError, match="2205"):
+            await use_case.execute([invoice.id])

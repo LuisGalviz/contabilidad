@@ -91,8 +91,43 @@ catálogo es por compañía. Al importar:
 
 Los alias de columna del lector están en
 `src/infrastructure/purchases/puc/siigo_chart_importer.py` (`SIIGO_ALIASES`); si Siigo
-cambia un encabezado, es una línea. Todavía **no se ha validado contra un archivo real**
-exportado de Siigo — los alias son una apuesta razonable hasta tener uno.
+cambia un encabezado, es una línea.
+
+### Validado contra un archivo real
+
+Probado con la exportación real de una empresa (1.107 filas). Lo que trae el reporte:
+
+- **4 filas de preámbulo** antes del encabezado: título, razón social y NIT.
+- Columnas: `Código`, `Nombre`, `Categoría`, `Clase`, `Relación con`,
+  `Maneja vencimientos`, `Diferencia fiscal`, `Activo`, `Nivel agrupación`.
+- **El archivo mezcla el árbol de agrupación con las cuentas de movimiento.** De 1.100
+  filas útiles, 431 son niveles de agrupación (`1`, `11`, `1105`) con las columnas de
+  detalle vacías, y solo 669 tienen `Nivel agrupación = Transaccional`. **Siigo rechaza
+  el comprobante entero si se causa contra una cuenta de agrupación**, así que el
+  importador las omite y nunca llegan al selector de clasificación.
+- De esas 669, 441 están activas (`Activo = Sí`).
+- Las clases vienen con los nombres de Siigo, no los del decreto: `Gastos`, `Ingresos`,
+  `Costos de venta`, `Costos de producción o de operación`, `Cuentas de orden
+  acreedoras`. Se traducen en `SIIGO_CLASS_LABELS`.
+
+### Los códigos reales no son los del seed
+
+Importante: el plan real usa **auxiliares de 8 dígitos** (`22050501` proveedores
+nacionales, `24081001` IVA descontable por compras 19%). Los códigos con los que nace un
+cliente (`2205`, `240801`) son cuentas de **agrupación** en Siigo y no existen como
+cuentas de movimiento.
+
+Consecuencia práctica: **después de importar el plan real hay que reconfigurar los roles
+contables**. El importador lo avisa explícitamente, y la causación se niega a correr con
+una cuenta que no existe en el plan del cliente en vez de generar un asiento contra un
+código muerto.
+
+### Retenciones ya tienen estructura en Siigo
+
+El plan real trae el árbol de retenciones por concepto y tarifa (`2365xx`: honorarios
+7 %/3,5 %/2 %/1 %, servicios 6 %/4 %/1 %/3,5 %, compras 2,5 %/3,5 %, arrendamientos,
+autorretenciones, y sus cuentas de devolución). Cuando se implementen retenciones, los
+códigos destino salen de ahí — no hay que inventarlos.
 
 ## Definiciones pendientes del equipo contable
 
