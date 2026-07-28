@@ -48,3 +48,8 @@ class CausationEntry:
     def mark_failed(self) -> None:
         self.status = CausationEntryStatus.FAILED
         self.updated_at = datetime.now(timezone.utc)
+
+    def mark_pushed_external(self, external_reference: str) -> None:
+        self.status = CausationEntryStatus.PUSHED_EXTERNAL
+        self.external_reference = external_reference
+        self.updated_at = datetime.now(timezone.utc)

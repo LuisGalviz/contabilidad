@@ -49,7 +49,7 @@ from src.domain.entities.invoice_import_batch import InvoiceImportBatch
 from src.domain.entities.mapping_rule import SupplierMappingRule
 from src.domain.entities.report import ReportType
 from src.domain.entities.supplier_invoice import InvoiceStatus, SupplierInvoice
-from src.infrastructure.accounting.internal_accounting_system import InternalAccountingSystem
+from src.infrastructure.accounting.factory import build_accounting_system
 from src.infrastructure.database.connection import get_session
 from src.infrastructure.repositories.causation_entry_repository import SQLCausationEntryRepository
 from src.infrastructure.repositories.classification_history_repository import SQLClassificationHistoryRepository
@@ -374,7 +374,7 @@ async def _run_causation_generation(
             logger.info("causation_generation_skipped_no_invoices", client_id=str(client_id), period=period)
             return
 
-        accounting_system = InternalAccountingSystem(causation_repo)
+        accounting_system = build_accounting_system(causation_repo)
         causation_use_case = GenerateCausationEntriesUseCase(invoice_repo=invoice_repo, accounting_system=accounting_system)
         try:
             await causation_use_case.execute(target_ids)

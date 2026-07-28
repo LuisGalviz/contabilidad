@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     storage_s3_secret_key: str = ""
     storage_s3_endpoint_url: str = ""
 
+    # Siigo integration
+    siigo_enabled: bool = False
+    siigo_use_mock: bool = True
+    siigo_api_url: str = "https://api.siigo.com"
+    siigo_username: str = ""
+    siigo_access_key: str = ""
+    siigo_partner_id: str = "ContaFlow"
+    # Siigo "comprobante de contabilidad" document type id — accountants must
+    # confirm which document type journal entries should land in (GET /v1/document-types?type=CC).
+    siigo_journal_document_id: int = 0
+
     # Rate limiting
     rate_limit_per_minute: int = 60
 
