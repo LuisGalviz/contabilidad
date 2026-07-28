@@ -69,6 +69,8 @@ class ProcessImportBatchUseCase:
                         vat_amount=_as_decimal(row["IVA"]),
                         total_amount=_as_decimal(row["TOTAL"]),
                         is_credit_note=is_credit_note(row["TIPO_DOCUMENTO"]),
+                        document_prefix=str(row["PREFIJO"]),
+                        document_number=str(row["NUMERO"]),
                         raw_row={str(k): str(v) for k, v in row.items()},
                     )
 

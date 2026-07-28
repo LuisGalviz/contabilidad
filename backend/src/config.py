@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     # Siigo "comprobante de contabilidad" document type id — accountants must
     # confirm which document type journal entries should land in (GET /v1/document-types?type=CC).
     siigo_journal_document_id: int = 0
+    # "journals" envía el asiento ya armado (POST /v1/journals); "purchases"
+    # envía la factura y deja que Siigo derive impuestos y cuenta por pagar
+    # (POST /v1/purchases). Este último es el destino natural para compras,
+    # pero exige `siigo_payment_type_id` y aún no se ha validado contra la API
+    # real, así que el modo por defecto sigue siendo el probado.
+    siigo_document_mode: str = "journals"
+    # Medio de pago de Siigo para el modo "purchases" (GET /v1/payment-types).
+    siigo_payment_type_id: int = 0
 
     # Rate limiting
     rate_limit_per_minute: int = 60

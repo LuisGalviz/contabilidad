@@ -36,6 +36,11 @@ class SupplierInvoice:
     total_amount: Decimal
     id: UUID = field(default_factory=uuid4)
     is_credit_note: bool = False
+    # Prefijo y número de la factura del proveedor, exigidos por Siigo al
+    # registrar la compra. Pueden venir vacíos: no todos los archivos de la
+    # DIAN traen esas columnas.
+    document_prefix: str = ""
+    document_number: str = ""
     status: InvoiceStatus = InvoiceStatus.PENDING_REVIEW
     suggested_account_code: str | None = None
     suggested_cost_center_id: UUID | None = None

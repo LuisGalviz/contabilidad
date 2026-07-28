@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from src.domain.entities.causation_entry import CausationEntry, CausationEntryStatus
+    from src.domain.entities.supplier_invoice import SupplierInvoice
     from src.domain.repositories.causation_entry_repository import CausationEntryRepository
 
 
@@ -22,7 +23,7 @@ class InternalAccountingSystem(AccountingSystemPort):
     def __init__(self, causation_repo: CausationEntryRepository) -> None:
         self._causation_repo = causation_repo
 
-    async def post_entry(self, entry: CausationEntry) -> CausationEntry:
+    async def post_entry(self, entry: CausationEntry, invoice: SupplierInvoice) -> CausationEntry:
         if not entry.is_balanced():
             entry.mark_failed()
             await self._causation_repo.save(entry)

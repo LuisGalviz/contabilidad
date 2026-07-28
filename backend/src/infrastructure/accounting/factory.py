@@ -5,7 +5,10 @@ from typing import TYPE_CHECKING
 
 from src.config import get_settings
 from src.infrastructure.accounting.internal_accounting_system import InternalAccountingSystem
-from src.infrastructure.siigo.accounting_system import SiigoAccountingSystem
+from src.infrastructure.siigo.accounting_system import (
+    DOCUMENT_MODE_PURCHASES,
+    SiigoAccountingSystem,
+)
 from src.infrastructure.siigo.auth import SiigoAuthenticator
 from src.infrastructure.siigo.client import SiigoHttpClient
 from src.infrastructure.siigo.errors import SiigoConfigurationError
@@ -56,5 +59,17 @@ def build_accounting_system(causation_repo: CausationEntryRepository) -> Account
     if not settings.siigo_enabled:
         return InternalAccountingSystem(causation_repo)
 
+    if settings.siigo_document_mode == DOCUMENT_MODE_PURCHASES and settings.siigo_payment_type_id <= 0:
+        raise SiigoConfigurationError(
+            "SIIGO_DOCUMENT_MODE=purchases requires SIIGO_PAYMENT_TYPE_ID "
+            "(see GET /v1/payment-types)."
+        )
+
     client: SiigoClient = _shared_mock_client() if settings.siigo_use_mock else _shared_siigo_client()
-    return SiigoAccountingSystem(causation_repo, client, settings.siigo_journal_document_id)
+    return SiigoAccountingSystem(
+        causation_repo,
+        client,
+        settings.siigo_journal_document_id,
+        document_mode=settings.siigo_document_mode,
+        payment_type_id=settings.siigo_payment_type_id,
+    )

@@ -51,7 +51,7 @@ class FakeInvoiceRepo:
 
 
 class FakeAccountingSystem:
-    async def post_entry(self, entry: CausationEntry) -> CausationEntry:
+    async def post_entry(self, entry: CausationEntry, invoice: SupplierInvoice) -> CausationEntry:
         return entry
 
 

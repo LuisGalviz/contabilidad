@@ -13,6 +13,7 @@ from src.domain.entities.causation_entry import (
     CausationEntryLine,
     CausationEntryStatus,
 )
+from src.domain.entities.supplier_invoice import SupplierInvoice
 from src.infrastructure.siigo.accounting_system import SiigoAccountingSystem
 from src.infrastructure.siigo.auth import SiigoAuthenticator
 from src.infrastructure.siigo.errors import SiigoApiError, SiigoAuthenticationError, SiigoError
@@ -32,6 +33,24 @@ def _make_entry(lines: list[CausationEntryLine] | None = None) -> CausationEntry
             CausationEntryLine(account_code="240801", debit=Decimal("19000"), credit=Decimal("0"), description="IVA"),
             CausationEntryLine(account_code="2205", debit=Decimal("0"), credit=Decimal("119000"), description="CxP"),
         ],
+    )
+
+
+def _make_invoice() -> SupplierInvoice:
+    return SupplierInvoice(
+        tenant_id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        import_batch_id=uuid.uuid4(),
+        cufe="CUFE-1",
+        supplier_nit="900111",
+        supplier_name="Proveedor SAS",
+        issue_date=date(2026, 1, 15),
+        concept_description="Servicio",
+        subtotal=Decimal("100000"),
+        vat_amount=Decimal("19000"),
+        total_amount=Decimal("119000"),
+        document_prefix="FE",
+        document_number="1234",
     )
 
 
@@ -78,7 +97,7 @@ class TestSiigoAccountingSystem:
         mock_client = MockSiigoClient()
         system = SiigoAccountingSystem(repo, mock_client, journal_document_id=1)
 
-        entry = await system.post_entry(_make_entry())
+        entry = await system.post_entry(_make_entry(), _make_invoice())
 
         assert entry.status == CausationEntryStatus.PUSHED_EXTERNAL
         assert entry.external_reference is not None
@@ -95,7 +114,7 @@ class TestSiigoAccountingSystem:
         )
 
         with pytest.raises(ValueError):
-            await system.post_entry(entry)
+            await system.post_entry(entry, _make_invoice())
 
         assert entry.status == CausationEntryStatus.FAILED
         assert mock_client.journals == []
@@ -110,7 +129,7 @@ class TestSiigoAccountingSystem:
         entry = _make_entry()
 
         with pytest.raises(SiigoError):
-            await system.post_entry(entry)
+            await system.post_entry(entry, _make_invoice())
 
         assert entry.status == CausationEntryStatus.FAILED
         assert repo.saved == [entry]
@@ -118,7 +137,7 @@ class TestSiigoAccountingSystem:
     async def test_get_entry_status_reads_from_repo(self):
         repo = _FakeCausationRepo()
         system = SiigoAccountingSystem(repo, MockSiigoClient(), journal_document_id=1)
-        entry = await system.post_entry(_make_entry())
+        entry = await system.post_entry(_make_entry(), _make_invoice())
 
         assert await system.get_entry_status(entry.id) == CausationEntryStatus.PUSHED_EXTERNAL
 

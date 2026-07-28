@@ -20,14 +20,21 @@ class MockSiigoClient(SiigoClient):
 
     def __init__(self) -> None:
         self.journals: list[dict[str, Any]] = []
+        self.purchases: list[dict[str, Any]] = []
         self._sequence = count(1)
 
     async def create_journal(self, payload: dict[str, Any]) -> SiigoJournalResult:
         self.journals.append(payload)
-        number = next(self._sequence)
-        result = SiigoJournalResult(siigo_id=str(uuid4()), document_number=f"MOCK-{number}")
+        return self._result("siigo_mock_journal_created", payload)
+
+    async def create_purchase(self, payload: dict[str, Any]) -> SiigoJournalResult:
+        self.purchases.append(payload)
+        return self._result("siigo_mock_purchase_created", payload)
+
+    def _result(self, event: str, payload: dict[str, Any]) -> SiigoJournalResult:
+        result = SiigoJournalResult(siigo_id=str(uuid4()), document_number=f"MOCK-{next(self._sequence)}")
         logger.info(
-            "siigo_mock_journal_created",
+            event,
             siigo_id=result.siigo_id,
             document_number=result.document_number,
             items=len(payload.get("items", [])),

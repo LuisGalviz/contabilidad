@@ -45,6 +45,29 @@ Notas:
 - Siigo también entrega **credenciales de un ambiente de pruebas** si se solicitan a sus
   líneas de atención indicando el NIT registrado — útiles antes de salir a producción.
 
+## Destino del documento: `journals` vs `purchases`
+
+`SIIGO_DOCUMENT_MODE` elige a qué endpoint va la causación:
+
+| Modo | Endpoint | Quién decide la contabilización |
+|---|---|---|
+| `journals` (por defecto) | `POST /v1/journals` | ContaFlow arma el asiento completo |
+| `purchases` | `POST /v1/purchases` | Siigo deriva impuestos y cuenta por pagar |
+
+`purchases` es el destino natural de una factura de compra y el que abre la puerta
+a **retenciones** (`retentions`) y **forma de pago** (`payments[].due_date`) sin que
+ContaFlow tenga que implementar la lógica tributaria colombiana. En modo `purchases`
+solo se envían las líneas de gasto/costo como ítems `type: "Account"`; el IVA y la
+cuenta por pagar se excluyen para no duplicar lo que Siigo calcula.
+
+**Todavía no se puede activar.** Falta:
+
+1. `SIIGO_PAYMENT_TYPE_ID` — el medio de pago (`GET /v1/payment-types`).
+2. Que el **proveedor exista en Siigo** por NIT antes de enviar; hoy no se crea
+   automáticamente.
+3. Validar el contrato contra la API real: los campos se tomaron de la documentación
+   pública, no de una llamada verificada.
+
 ## Plan de cuentas: importación manual (no hay API)
 
 Siigo **no expone el catálogo de cuentas contables por su API**. Revisado contra la

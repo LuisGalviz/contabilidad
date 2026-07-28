@@ -184,6 +184,8 @@ class SupplierInvoiceModel(Base):
     vat_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     is_credit_note: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default=text("false"))
+    document_prefix: Mapped[str] = mapped_column(String(50), default="", nullable=False, server_default="")
+    document_number: Mapped[str] = mapped_column(String(50), default="", nullable=False, server_default="")
     status: Mapped[str] = mapped_column(String(30), default="pending_review")
     suggested_account_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     suggested_cost_center_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

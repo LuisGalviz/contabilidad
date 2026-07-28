@@ -36,6 +36,11 @@ class SiigoClient(ABC):
     @abstractmethod
     async def create_journal(self, payload: dict[str, Any]) -> SiigoJournalResult: ...
 
+    @abstractmethod
+    async def create_purchase(self, payload: dict[str, Any]) -> SiigoJournalResult:
+        """Factura de compra (POST /v1/purchases). A diferencia del journal,
+        Siigo deriva impuestos y cuenta por pagar con sus propias reglas."""
+
 
 def _is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, httpx.TransportError):
@@ -64,6 +69,14 @@ class SiigoHttpClient(SiigoClient):
         siigo_id = str(data.get("id", ""))
         if not siigo_id:
             raise SiigoApiError(502, "Siigo journal response did not include an id.")
+        number = data.get("number") or data.get("name")
+        return SiigoJournalResult(siigo_id=siigo_id, document_number=str(number) if number else None)
+
+    async def create_purchase(self, payload: dict[str, Any]) -> SiigoJournalResult:
+        data = await self._request("POST", "/v1/purchases", payload)
+        siigo_id = str(data.get("id", ""))
+        if not siigo_id:
+            raise SiigoApiError(502, "Siigo purchase response did not include an id.")
         number = data.get("number") or data.get("name")
         return SiigoJournalResult(siigo_id=siigo_id, document_number=str(number) if number else None)
 

@@ -23,6 +23,10 @@ DIAN_ALIASES: dict[str, list[str]] = {
     "RAZON_SOCIAL_EMISOR": ["RAZON SOCIAL EMISOR", "NOMBRE EMISOR", "RAZON SOCIAL", "EMISOR"],
     "FECHA_EMISION": ["FECHA EMISION", "FECHA DE EMISION", "FECHA"],
     "CONCEPTO": ["CONCEPTO", "DESCRIPCION", "DETALLE", "OBSERVACIONES"],
+    # Prefijo y número de la factura del proveedor: Siigo los exige en
+    # `provider_invoice` al registrar una factura de compra (POST /v1/purchases).
+    "PREFIJO": ["PREFIJO", "PREFIJO DOCUMENTO", "SERIE"],
+    "NUMERO": ["NUMERO DOCUMENTO", "NUMERO", "NUMERO DE DOCUMENTO", "FOLIO", "NUMERO FACTURA", "NRO DOCUMENTO"],
     "SUBTOTAL": ["SUBTOTAL", "VALOR ANTES DE IMPUESTOS", "BASE"],
     "IVA": ["IVA", "VALOR IMPUESTO", "IMPUESTO"],
     "TOTAL": ["TOTAL", "VALOR TOTAL", "VALOR TOTAL A PAGAR", "TOTAL FACTURA"],
@@ -36,6 +40,21 @@ def is_credit_note(document_type: object) -> bool:
     notes (vs 'Factura electrónica'). Credit notes reverse the purchase, so
     causación must invert their accounting entry."""
     return "CREDITO" in normalize_text(document_type)
+
+
+def clean_document_part(value: object) -> str:
+    """Prefijo o número de la factura tal como los pide Siigo.
+
+    Pandas convierte los números en float ("1234.0"), y el prefijo a veces
+    viene pegado al número ("FE-1234"); acá solo se limpia el valor, no se
+    intenta separarlos.
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    text = str(value).strip()
+    if text.endswith(".0") and text[:-2].isdigit():
+        text = text[:-2]
+    return text[:50]
 
 
 def normalize_nit(value: object) -> str:
@@ -107,6 +126,8 @@ def load_dian_invoices(file: BytesIO) -> tuple[pd.DataFrame, list[str]]:
     df["NIT_EMISOR"] = df["NIT_EMISOR"].map(normalize_nit)
     df["RAZON_SOCIAL_EMISOR"] = df["RAZON_SOCIAL_EMISOR"].fillna("").astype(str).str.strip()
     df["CONCEPTO"] = df["CONCEPTO"].fillna("").astype(str).str.strip()
+    df["PREFIJO"] = df["PREFIJO"].map(clean_document_part)
+    df["NUMERO"] = df["NUMERO"].map(clean_document_part)
 
     if df["SUBTOTAL"].sum() == 0 and df["TOTAL"].sum() > 0:
         df["SUBTOTAL"] = df["TOTAL"] - df["IVA"]

@@ -88,7 +88,7 @@ class GenerateCausationEntriesUseCase:
                 entry_date=invoice.issue_date,
                 lines=lines,
             )
-            posted = await self.accounting_system.post_entry(entry)
+            posted = await self.accounting_system.post_entry(entry, invoice)
             invoice.mark_caused()
             await self.invoice_repo.save(invoice)
             entries.append(posted)
